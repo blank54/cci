@@ -67,7 +67,7 @@ def load_article(fpath_article):
         article = pk.load(f)
     return article
 
-def parse_article():
+def parse_article(verbose_error=False):
     total_num_urls = len(list(itertools.chain(*[load_url_list(fname) for fname in os.listdir(marketpath.fdir_url_list)])))
     errors = []
 
@@ -100,7 +100,7 @@ def parse_article():
     print('  | Done      : {:,} articles'.format(len(os.listdir(marketpath.fdir_article))))
     print('  | Error     : {:,}'.format(len(errors)))
 
-    if errors:
+    if verbose_error and errors:
         print('============================================================')
         print('Errors on articles:')
         for url in errors:
