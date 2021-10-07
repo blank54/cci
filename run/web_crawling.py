@@ -121,7 +121,7 @@ def print_article(fpath_article):
 
 if __name__ == '__main__':
     ## Web crawling information
-    fname_query = 'query_20211002.txt'
+    fname_query = 'query_20211006-2.txt'
         
     ## Parse query
     query_list, date_list = parse_query(fname_query=fname_query)
