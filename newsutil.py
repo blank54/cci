@@ -5,7 +5,7 @@
 import os
 
 
-class MarketPath:
+class NewsPath:
     root = os.path.dirname(os.path.abspath(__file__))
 
     fdir_query = os.path.sep.join((root, 'query'))
