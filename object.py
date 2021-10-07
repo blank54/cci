@@ -122,7 +122,7 @@ class NewsArticle:
         self.category = kwargs.get('category', '')
         self.content = kwargs.get('content', '')
 
-        self.content_normalized = kwargs.get('content_normalized', '')
+        self.sents = kwargs.get('sents', '')
 
     def extend_query(self, query_list):
         '''
