@@ -8,12 +8,13 @@ rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.
 sys.path.append(rootpath)
 
 from object import NewsQueryParser, NaverNewsListScraper, NaverNewsArticleParser, NewsStatus
-from newsutil import NewsPath
+from newsutil import NewsPath, NewsFunc
 query_parser = NewsQueryParser()
 list_scraper = NaverNewsListScraper()
 article_parser = NaverNewsArticleParser()
 news_status = NewsStatus()
 newspath = NewsPath()
+newsfunc = NewsFunc()
 
 import itertools
 import pickle as pk
@@ -32,7 +33,9 @@ def save_url_list(url_list, fname_url_list):
     with open(fpath_url_list, 'wb') as f:
         pk.dump(url_list, f)
 
-def scrape_url_list(query_list, date_list):
+def scrape_url_list():
+    global query_list, date_list
+
     print('============================================================')
     print('URL list scraping')
     for date in sorted(date_list, reverse=False):
@@ -68,6 +71,8 @@ def load_article(fpath_article):
     return article
 
 def parse_article(verbose_error=False):
+    global query_list, date_list
+
     total_num_urls = len(list(itertools.chain(*[load_url_list(fname) for fname in os.listdir(newspath.fdir_url_list)])))
     errors = []
 
@@ -75,7 +80,15 @@ def parse_article(verbose_error=False):
     print('Article parsing')
     with tqdm(total=total_num_urls) as pbar:
         for fname_url_list in os.listdir(newspath.fdir_url_list):
-            query_list, _ = query_parser.urlname2query(fname_url_list=fname_url_list)
+            query, date = newsfunc.parse_fname_url_list(fname_url_list=fname_url_list)
+            if query not in query_list:
+                continue
+            elif date not in date_list:
+                continue
+            else:
+                pass
+
+            query_list_of_url, _ = query_parser.urlname2query(fname_url_list=fname_url_list)
             url_list = load_url_list(fname_url_list=fname_url_list)
 
             for url in url_list:
@@ -92,7 +105,7 @@ def parse_article(verbose_error=False):
                 else:
                     article = load_article(fpath_article=fpath_article)
 
-                article.extend_query(query_list)
+                article.extend_query(query_list_of_url)
                 save_article(article=article, fpath_article=fpath_article)
 
     print('============================================================')
@@ -120,17 +133,27 @@ def print_article(fpath_article):
 
 
 if __name__ == '__main__':
+    query_id = str(sys.argv[1])
+    option_scrape_url_list = str(sys.argv[2])
+    option_parse_article = str(sys.argv[3])
+
     ## Web crawling information
-    fname_query = 'query_{}.txt'.format(str(sys.argv[1]))
+    fname_query = 'query_{}.txt'.format(query_id)
         
     ## Parse query
     query_list, date_list = parse_query(fname_query=fname_query)
 
     ## Scrape URL list
-    scrape_url_list(query_list=query_list, date_list=date_list)
+    if option_scrape_url_list == 'true':
+        scrape_url_list()
+    else:
+        pass
 
     ## Parse article
-    parse_article()
+    if option_parse_article == 'true':
+        parse_article()
+    else:
+        pass
 
     # ## Data collection status
     # news_status.queries(fdir_query=fdir_query)
