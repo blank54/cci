@@ -73,21 +73,23 @@ def load_article(fpath_article):
 def parse_article(verbose_error=False):
     global query_list, date_list
 
-    total_num_urls = len(list(itertools.chain(*[load_url_list(fname) for fname in os.listdir(newspath.fdir_url_list)])))
+    flist_url_list = []
+    url_count = 0
     errors = []
+    for fname_url_list in os.listdir(newspath.fdir_url_list):
+        query, date = newsfunc.parse_fname_url_list(fname_url_list=fname_url_list)
+        if query not in query_list:
+            continue
+        elif date not in date_list:
+            continue
+        else:
+            flist_url_list.append(fname_url_list)
+            url_count += len(load_url_list(fname_url_list=fname_url_list))
 
     print('============================================================')
     print('Article parsing')
-    with tqdm(total=total_num_urls) as pbar:
-        for fname_url_list in os.listdir(newspath.fdir_url_list):
-            query, date = newsfunc.parse_fname_url_list(fname_url_list=fname_url_list)
-            if query not in query_list:
-                continue
-            elif date not in date_list:
-                continue
-            else:
-                pass
-
+    with tqdm(total=url_count) as pbar:
+        for fname_url_list in flist_url_list:
             query_list_of_url, _ = query_parser.urlname2query(fname_url_list=fname_url_list)
             url_list = load_url_list(fname_url_list=fname_url_list)
 
@@ -109,7 +111,7 @@ def parse_article(verbose_error=False):
                 save_article(article=article, fpath_article=fpath_article)
 
     print('============================================================')
-    print('  | Initial   : {:,} urls'.format(total_num_urls))
+    print('  | Initial   : {:,} urls'.format(url_count))
     print('  | Done      : {:,} articles'.format(len(os.listdir(newspath.fdir_article))))
     print('  | Error     : {:,}'.format(len(errors)))
 
