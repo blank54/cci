@@ -63,3 +63,9 @@ class NewsFunc:
 
         sents = ['{}다.'.format(sent) for sent in text.split('다.')]
         return sents
+
+    def parse_fname_url(self, fname_url):
+        query_part, date_part = fname_url.replace('.pk', '').split('_')
+        query = query_part.split('-')[-1]
+        date = date_part.split('-')[-1]
+        return query, date
