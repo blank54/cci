@@ -23,7 +23,7 @@ if __name__ == '__main__':
     flist_url = os.listdir(newspath.fdir_url_list)
     url_dict = defaultdict(list)
     for fname_url in flist_url:
-        query, date = newsfunc.parse_fname_url(fname_url)
+        query, date = newsfunc.parse_fname_url_list(fname_url)
         url_dict[query].append(date)
 
     print('  | fdir: {}'.format(newspath.fdir_url_list))
