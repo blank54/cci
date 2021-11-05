@@ -21,20 +21,20 @@ if __name__ == '__main__':
     print('URLs')
 
     flist_url = os.listdir(newspath.fdir_url_list)
-    url_dict = defaultdict(list)
+    query2date = defaultdict(list)
     for fname_url in flist_url:
         query, date = newsfunc.parse_fname_url_list(fname_url)
-        url_dict[query].append(date)
+        query2date[query].append(date)
 
     print('  | fdir: {}'.format(newspath.fdir_url_list))
-    for query in url_dict.keys():
-        url_date_list = list(sorted([date for date in url_dict[query]], reverse=False))
+    for query in query2date.keys():
+        url_date_list = list(sorted([date for date in query2date[query]], reverse=False))
 
         print('--------------------------------------------------')
         print('    | query     : {}'.format(query))
-        print('    | # of urls : {:,}'.format(len(url_dict[query])))
         print('    | start date: {}'.format(url_date_list[0]))
         print('    | end date  : {}'.format(url_date_list[-1]))
+        print('    | # of dates: {:,}'.format(len(query2date[query])))
 
 
     print('============================================================')
