@@ -70,12 +70,13 @@ def load_article(fpath_article):
         article = pk.load(f)
     return article
 
-def parse_article(verbose_error=False):
+def parse_article(verbose_error):
     global query_list, date_list
 
     flist_url_list = []
     url_count = 0
-    errors = []
+    url_errors = []
+    eof_errors = []
     for fname_url_list in os.listdir(newspath.fdir_url_list):
         query, date = newsfunc.parse_fname_url_list(fname_url_list=fname_url_list)
         if query not in query_list:
@@ -102,24 +103,34 @@ def parse_article(verbose_error=False):
                     try:
                         article = article_parser.parse(url=url)
                     except:
-                        errors.append(url)
+                        url_errors.append(url)
                         continue
                 else:
-                    article = load_article(fpath_article=fpath_article)
+                    try:
+                        article = load_article(fpath_article=fpath_article)
+                    except EOFError as e:
+                        eof_errors.append(e)
+                        continue
 
                 article.extend_query(query_list_of_url)
                 save_article(article=article, fpath_article=fpath_article)
 
     print('============================================================')
-    print('  | Initial   : {:,} urls'.format(url_count))
-    print('  | Done      : {:,} articles'.format(len(os.listdir(newspath.fdir_article))))
-    print('  | Error     : {:,}'.format(len(errors)))
+    print('  | Initial      : {:,} urls'.format(url_count))
+    print('  | Done         : {:,} articles'.format(len(os.listdir(newspath.fdir_article))))
+    print('  | Error in URL : {:,}'.format(len(url_errors)))
+    print('  | Error in File: {:,}'.format(len(eof_errors)))
 
-    if verbose_error and errors:
-        print('============================================================')
-        print('Errors on articles:')
-        for url in errors:
+    if verbose_error and any((url_errors, eof_errors)):
+        print('------------------------------------------------------------')
+        print('Errors on URLs:')
+        for url in url_errors:
             print(url)
+
+        print('------------------------------------------------------------')
+        print('Errors in EOFs:')
+        for e in eof_errors:
+            print(e)
 
 ## Use article
 def print_article(fpath_article):
@@ -153,7 +164,7 @@ if __name__ == '__main__':
 
     ## Parse article
     if option_parse_article == 'true':
-        parse_article()
+        parse_article(verbose_error=True)
     else:
         pass
 
