@@ -3,6 +3,7 @@
 
 # Configuration
 import os
+import sys
 import psutil
 import pickle as pk
 from tqdm import tqdm
@@ -26,22 +27,31 @@ class NewsIO(NewsPath):
         print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
         print('--------------------------------------------------')
 
-    def read_articles(self):
-        print('============================================================')
-        print('Read articles')
-
+    def read_articles(self, iter='all'):
         flist = os.listdir(self.fdir_article)
-        docs = []
-        with tqdm(total=len(flist)) as pbar:
+
+        if iter == 'all':
+            docs = []
+            with tqdm(total=len(flist)) as pbar:
+                for fname in flist:
+                    fpath = os.path.join(self.fdir_article, fname)
+                    with open(fpath, 'rb') as f:
+                        docs.append(pk.load(f))
+                        pbar.update(1)
+
+            print('  | fdir: {}'.format(self.fdir_article))
+            print('  | # of articles: {:,}'.format(len(flist)))
+            return docs
+
+        elif iter == 'each':
             for fname in flist:
                 fpath = os.path.join(self.fdir_article, fname)
-                with open(fpath, 'rb') as f:
-                    docs.append(pk.load(f))
-                    pbar.update(1)
+                with open(fpath 'rb') as f:
+                    yield pk.load(f)
 
-        print('  | fdir: {}'.format(self.fdir_article))
-        print('  | # of articles: {:,}'.format(len(flist)))
-        return docs
+        else:
+            print('ArgvError: Use proper value of \"iter\"')
+            sys.exit()
 
     def save_corpus(self, corpus, fname):
         print('============================================================')
