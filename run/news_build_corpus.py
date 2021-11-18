@@ -22,6 +22,6 @@ if __name__ == '__main__':
     newsio.memory_usage()
 
     ## Save docs as corpus
-    fname_corpus = 'corpus_20211007.pk'
+    fname_corpus = 'corpus_{}.pk'.format(sys.argv[1])
     newsio.save_corpus(corpus=docs, fname=fname_corpus)
     newsio.memory_usage()
