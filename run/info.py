@@ -58,15 +58,3 @@ if __name__ == '__main__':
     print('  | # of articles(ready): {:,}'.format(article_count))
     print('  | # of articles(done) : {:,}'.format(len(flist_article)))
     print('  | total filesize      : {:,.02f} MB ({:,.02f} GB)'.format(fsize_total_article/(1024**2), fsize_total_article/(1024**3)))
-
-    print('============================================================')
-    print('Corpus')
-
-    fname_corpus = list(sorted(os.listdir(newspath.fdir_corpus), reverse=True))[0]
-    fpath_corpus = os.path.sep.join((newspath.fdir_corpus, fname_corpus))
-    with open(fpath_corpus, 'rb') as f:
-        corpus = pk.load(f)
-
-    print('  | fdir: {}'.format(newspath.fdir_corpus))
-    print('  | fname(most recent): {}'.format(fname_corpus))
-    print('  | # of articles in corpus: {:,}'.format(len(corpus)))

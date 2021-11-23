@@ -54,10 +54,6 @@ class NewsIO(NewsPath):
             print('ArgvError: Use proper value of \"iter\"')
             sys.exit()
 
-    def save_corpus(self, corpus, fpath):
-        with open(fpath, 'wb') as f:
-            json.dump(corpus, f)
-
 
 class NewsFunc:
     def text2sents(self, text):

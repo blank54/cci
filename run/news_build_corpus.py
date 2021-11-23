@@ -20,48 +20,47 @@ from collections import defaultdict
 def build_corpus(fdir):
     total = len(os.listdir(fdir))
     cnt = 0
+    cnt_success = 0
+    cnt_error = 0
 
-    corpus = defaultdict(dict)
+    errors = []
     for path, dirs, files in os.walk(fdir):
-        for f in files:
-            fpath = os.path.sep.join((path, f))
-            with open(fpath, 'rb') as f:
-                article = pk.load(f)
-
-            corpus[article.id] = {'url': article.url,
-                                  'query': '  '.join(article.query),
-                                  'title': article.title,
-                                  'date': article.date,
-                                  'category': article.category,
-                                  'content': article.content,
-                                  }
-
+        for fname in files:
             cnt += 1
-            sys.stdout.write('\r  | {:,} articles ({:,.02f} % | total: {:,})'.format(cnt, ((cnt*100)/total), total))
+            fpath_data = os.path.sep.join((path, fname))
+            with open(fpath_data, 'rb') as fd:
+                try:
+                    article = pk.load(fd)
+
+                    yearmonth = str(article.date[:6])
+                    fdir_yearmonth = os.path.sep.join((newspath.fdir_corpus, 'Q-건설', yearmonth))
+                    if not os.path.isdir(fdir_yearmonth):
+                        os.makedirs(fdir_yearmonth)
+                    else:
+                        pass
+
+                    fpath_corpus = os.path.sep.join((fdir_yearmonth, fname))
+                    with open(fpath_corpus, 'wb') as fc:
+                        pk.dump(article, fc)
+
+                    cnt_success += 1
+
+                except EOFError:
+                    errors.append(fpath_data)
+                    cnt_error += 1
+            
+            sys.stdout.write('\r  | success-{:,} / error-{:,} ({:,.02f} % from total {:,} articles)'.format(cnt_success, cnt_error, ((cnt*100)/total), total))
 
     print()
-    return corpus
+    return errors
 
 
 if __name__ == '__main__':
-    ## Filenames
-    fname_corpus = 'corpus_{}.json'.format(str(sys.argv[1]))
-
     ## Build corpus
     print('============================================================')
     print('Build corpus')
 
-    fdir = newspath.fdir_article
-    corpus = build_corpus(fdir=fdir)
-
-    print('  | # of articles: {:,}'.format(len(corpus)))
-
-    ## Save corpus
-    print('============================================================')
-    print('Save corpus')
-
-    fpath_corpus = os.path.join(newspath.fdir_corpus, fname_corpus)
-    newsio.save_corpus(corpus=corpus, fpath=fpath_corpus)
+    errors = build_corpus(fdir=newspath.fdir_article)
 
     print('  | fdir : {}'.format(newspath.fdir_corpus))
-    print('  | fname: {}'.format(fname_corpus))
+    print('  | errors: {:,} articles'.format(len(errors)))
