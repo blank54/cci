@@ -4,6 +4,7 @@
 # Configuration
 import os
 import sys
+import json
 import psutil
 import pickle as pk
 from tqdm import tqdm
@@ -53,16 +54,9 @@ class NewsIO(NewsPath):
             print('ArgvError: Use proper value of \"iter\"')
             sys.exit()
 
-    def save_corpus(self, corpus, fname):
-        print('============================================================')
-        print('Save corpus')
-
-        fpath = os.path.join(self.fdir_corpus, fname)
+    def save_corpus(self, corpus, fpath):
         with open(fpath, 'wb') as f:
-            pk.dump(corpus, f)
-
-        print('  | fdir : {}'.format(self.fdir_corpus))
-        print('  | fname: {}'.format(fname))
+            json.dump(corpus, f)
 
 
 class NewsFunc:
