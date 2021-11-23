@@ -44,10 +44,10 @@ class NewsIO(NewsPath):
             return docs
 
         elif iter == 'each':
-            for fname in flist:
+            for idx, fname in enumerate(flist):
                 fpath = os.path.join(self.fdir_article, fname)
-                with open(fpath 'rb') as f:
-                    yield pk.load(f)
+                with open(fpath, 'rb') as f:
+                    yield (idx, pk.load(f))
 
         else:
             print('ArgvError: Use proper value of \"iter\"')
