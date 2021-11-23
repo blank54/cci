@@ -62,5 +62,5 @@ if __name__ == '__main__':
 
     errors = build_corpus(fdir=newspath.fdir_article)
 
-    print('  | fdir : {}'.format(newspath.fdir_corpus))
+    print('  | fdir  : {}'.format(newspath.fdir_corpus))
     print('  | errors: {:,} articles'.format(len(errors)))
