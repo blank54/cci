@@ -48,13 +48,13 @@ if __name__ == '__main__':
 
     flist_article = []
     fsize_total_article = 0
-    for path, dirs, files in os.walk(newspath.fdir_article):
+    for path, dirs, files in os.walk(newspath.fdir_corpus):
         for f in files:
             fpath = os.path.sep.join((path, f))
             flist_article.append(fpath)
             fsize_total_article += os.path.getsize(fpath)
 
-    print('  | fdir: {}'.format(newspath.fdir_article))
+    print('  | fdir: {}'.format(newspath.fdir_corpus))
     print('  | # of articles(ready): {:,}'.format(article_count))
     print('  | # of articles(done) : {:,}'.format(len(flist_article)))
     print('  | total filesize      : {:,.02f} MB ({:,.02f} GB)'.format(fsize_total_article/(1024**2), fsize_total_article/(1024**3)))
