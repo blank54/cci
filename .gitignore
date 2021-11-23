@@ -22,10 +22,12 @@ test*
 *.sql
 *.json
 *.dill
-*.pk
 *.bin
 *.html
 *.png
 *.csv
 *.h5
 *.txt
+
+# Corpus
+corpus/*
