@@ -17,6 +17,7 @@ from collections import defaultdict
 
 
 if __name__ == '__main__':
+    ## URLs
     print('============================================================')
     print('URLs')
 
@@ -36,7 +37,7 @@ if __name__ == '__main__':
         print('    | end date  : {}'.format(url_date_list[-1]))
         print('    | # of dates: {:,}'.format(len(query2date[query])))
 
-
+    ## Articles
     print('============================================================')
     print('Articles')
 
@@ -48,13 +49,20 @@ if __name__ == '__main__':
 
     flist_article = []
     fsize_total_article = 0
-    for path, dirs, files in os.walk(newspath.fdir_corpus):
+    for path, dirs, files in os.walk(newspath.fdir_article):
         for f in files:
             fpath = os.path.sep.join((path, f))
             flist_article.append(fpath)
             fsize_total_article += os.path.getsize(fpath)
 
-    print('  | fdir: {}'.format(newspath.fdir_corpus))
+    print('  | fdir: {}'.format(newspath.fdir_article))
     print('  | # of articles(ready): {:,}'.format(article_count))
     print('  | # of articles(done) : {:,}'.format(len(flist_article)))
     print('  | total filesize      : {:,.02f} MB ({:,.02f} GB)'.format(fsize_total_article/(1024**2), fsize_total_article/(1024**3)))
+
+    ## Corpus
+    print('============================================================')
+    print('Corpus')
+
+    for fdir in sorted(os.listdir(os.path.sep.join((newspath.fdir_corpus, 'Q-건설')))):
+        print('  | {}: {:>7,d} articles'.format(fdir, len(os.listdir(os.path.sep.join((newspath.fdir_corpus, 'Q-건설', fdir))))))
