@@ -17,6 +17,7 @@ class NewsPath:
     fdir_data = os.path.sep.join((root, 'data'))
     fdir_corpus = os.path.sep.join((root, 'corpus'))
     fdir_model = os.path.sep.join((root, 'model'))
+    fdir_thesaurus = os.path.sep.join((root, 'thesaurus'))
 
     fdir_url_list = os.path.sep.join((fdir_data, 'url_list'))
     fdir_article = os.path.sep.join((fdir_data, 'article'))
@@ -48,6 +49,13 @@ class NewsIO(NewsPath):
             print(f'  | fname: {fname_corpus}')
 
         return corpus
+
+    def read_thesaurus(self, fname_thesaurus):
+        fpath_thesaurus = os.path.sep.join((self.fdir_thesaurus, fname_thesaurus))
+        with open(fpath_thesaurus, 'r', encoding='utf-8') as f:
+            word_list = list(set([w.strip() for w in f.read().strip().split('\n')]))
+
+        return word_list
 
 
 class NewsFunc:
