@@ -7,13 +7,14 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from newsutil import NewsPath
+from newsutil import NewsPath, NewsIO
 newspath = NewsPath()
+newsio = NewsIO()
 
 import random
 import pickle as pk
 from tqdm import tqdm
-
+random.seed(42)
 
 def build_corpus(**kwargs):
     print('--------------------------------------------------')
@@ -44,14 +45,6 @@ def build_corpus(**kwargs):
 
     return corpus
 
-def save_corpus(corpus, fname_corpus):
-    fpath_corpus = os.path.sep.join((newspath.fdir_corpus, fname_corpus))
-    with open(fpath_corpus, 'wb') as f:
-        pk.dump(corpus, f)
-
-    print(f'  | fdir : {newspath.fdir_corpus}')
-    print(f'  | fname: {fname_corpus}')
-
 
 if __name__ == '__main__':
     ## Parameters
@@ -70,4 +63,4 @@ if __name__ == '__main__':
     print('============================================================')
     print('Save corpus')
 
-    save_corpus(corpus=corpus, fname_corpus=fname_corpus)
+    newsio.save_corpus(corpus=corpus, fname_corpus=fname_corpus)

@@ -29,31 +29,25 @@ class NewsIO(NewsPath):
         print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
         print('--------------------------------------------------')
 
-    def read_articles(self, iter='all'):
-        flist = os.listdir(self.fdir_article)
+    def save_corpus(self, corpus, fname_corpus, verbose=True):
+        fpath_corpus = os.path.sep.join((self.fdir_corpus, fname_corpus))
+        with open(fpath_corpus, 'wb') as f:
+            pk.dump(corpus, f)
 
-        if iter == 'all':
-            docs = []
-            with tqdm(total=len(flist)) as pbar:
-                for fname in flist:
-                    fpath = os.path.join(self.fdir_article, fname)
-                    with open(fpath, 'rb') as f:
-                        docs.append(pk.load(f))
-                        pbar.update(1)
+        if verbose:
+            print(f'  | fdir : {self.fdir_corpus}')
+            print(f'  | fname: {fname_corpus}')
 
-            print('  | fdir: {}'.format(self.fdir_article))
-            print('  | # of articles: {:,}'.format(len(flist)))
-            return docs
+    def load_corpus(self, fname_corpus, verbose=True):
+        fpath_corpus = os.path.sep.join((self.fdir_corpus, fname_corpus))
+        with open(fpath_corpus, 'rb') as f:
+            corpus = pk.load(f)
 
-        elif iter == 'each':
-            for idx, fname in enumerate(flist):
-                fpath = os.path.join(self.fdir_article, fname)
-                with open(fpath, 'rb') as f:
-                    yield (idx, pk.load(f))
+        if verbose:
+            print(f'  | fdir : {self.fdir_corpus}')
+            print(f'  | fname: {fname_corpus}')
 
-        else:
-            print('ArgvError: Use proper value of \"iter\"')
-            sys.exit()
+        return corpus
 
 
 class NewsFunc:
