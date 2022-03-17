@@ -7,7 +7,7 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsQueryParser, NaverNewsListScraper, NaverNewsArticleParser, NewsStatus
+from object import *
 from newsutil import NewsPath, NewsFunc
 query_parser = NewsQueryParser()
 list_scraper = NaverNewsListScraper()

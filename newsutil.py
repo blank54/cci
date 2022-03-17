@@ -16,6 +16,8 @@ class NewsPath:
     fdir_query = os.path.sep.join((root, 'query'))
     fdir_data = os.path.sep.join((root, 'data'))
     fdir_corpus = os.path.sep.join((root, 'corpus'))
+    fdir_model = os.path.sep.join((root, 'model'))
+    fdir_thesaurus = os.path.sep.join((root, 'thesaurus'))
 
     fdir_url_list = os.path.sep.join((fdir_data, 'url_list'))
     fdir_article = os.path.sep.join((fdir_data, 'article'))
@@ -28,31 +30,34 @@ class NewsIO(NewsPath):
         print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
         print('--------------------------------------------------')
 
-    def read_articles(self, iter='all'):
-        flist = os.listdir(self.fdir_article)
+    def save(self, _object, _type, fname_object, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+        with open(fpath_object, 'wb') as f:
+            pk.dump(_object, f)
 
-        if iter == 'all':
-            docs = []
-            with tqdm(total=len(flist)) as pbar:
-                for fname in flist:
-                    fpath = os.path.join(self.fdir_article, fname)
-                    with open(fpath, 'rb') as f:
-                        docs.append(pk.load(f))
-                        pbar.update(1)
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
 
-            print('  | fdir: {}'.format(self.fdir_article))
-            print('  | # of articles: {:,}'.format(len(flist)))
-            return docs
+    def load(self, fname_object, _type, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+        with open(fpath_object, 'rb') as f:
+            _object = pk.load(f)
 
-        elif iter == 'each':
-            for idx, fname in enumerate(flist):
-                fpath = os.path.join(self.fdir_article, fname)
-                with open(fpath, 'rb') as f:
-                    yield (idx, pk.load(f))
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
 
-        else:
-            print('ArgvError: Use proper value of \"iter\"')
-            sys.exit()
+        return _object
+
+    def read_thesaurus(self, fname_thesaurus):
+        fpath_thesaurus = os.path.sep.join((self.fdir_thesaurus, fname_thesaurus))
+        with open(fpath_thesaurus, 'r', encoding='utf-8') as f:
+            word_list = list(set([w.strip() for w in f.read().strip().split('\n')]))
+
+        return word_list
 
 
 class NewsFunc:
