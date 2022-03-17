@@ -89,7 +89,7 @@ if __name__ == '__main__':
     print('============================================================')
     print('Load corpus')
 
-    corpus = newsio.load_corpus(fname_corpus=fname_corpus)
+    corpus = newsio.load(fname_object=fname_corpus, _type='corpus')
     trash_word_list = newsio.read_thesaurus(fname_thesaurus=fname_trash_words)
     stoplist = newsio.read_thesaurus(fname_thesaurus=fname_stoplist)
 
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         else:
             continue
 
-    newsio.save_corpus(corpus=corpus_norm, fname_corpus=fname_corpus_norm)
+    newsio.save(_object=corpus_norm, _type='corpus', fname_object=fname_corpus_norm)
 
     print(f'  | Normalized corpus: {len(corpus_norm):,}')
 
@@ -127,6 +127,6 @@ if __name__ == '__main__':
             nouns_stop = remove_stopwords(sent=nouns, stoplist=stoplist)
             corpus_noun[_id].append(nouns_stop)
 
-    newsio.save_corpus(corpus=corpus_noun, fname_corpus=fname_corpus_noun)
+    newsio.save(_object=corpus_noun, _type='corpus', fname_object=fname_corpus_noun)
 
     print(f'  | Noun extracted corpus: {len(corpus_noun):,}')

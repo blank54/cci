@@ -30,25 +30,27 @@ class NewsIO(NewsPath):
         print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
         print('--------------------------------------------------')
 
-    def save_corpus(self, corpus, fname_corpus, verbose=True):
-        fpath_corpus = os.path.sep.join((self.fdir_corpus, fname_corpus))
-        with open(fpath_corpus, 'wb') as f:
-            pk.dump(corpus, f)
+    def save(self, _object, _type, fname_object, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+        with open(fpath_object, 'wb') as f:
+            pk.dump(_object, f)
 
         if verbose:
-            print(f'  | fdir : {self.fdir_corpus}')
-            print(f'  | fname: {fname_corpus}')
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
 
-    def load_corpus(self, fname_corpus, verbose=True):
-        fpath_corpus = os.path.sep.join((self.fdir_corpus, fname_corpus))
-        with open(fpath_corpus, 'rb') as f:
-            corpus = pk.load(f)
+    def load(self, fname_object, _type, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+        with open(fpath_object, 'rb') as f:
+            _object = pk.load(f)
 
         if verbose:
-            print(f'  | fdir : {self.fdir_corpus}')
-            print(f'  | fname: {fname_corpus}')
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
 
-        return corpus
+        return _object
 
     def read_thesaurus(self, fname_thesaurus):
         fpath_thesaurus = os.path.sep.join((self.fdir_thesaurus, fname_thesaurus))

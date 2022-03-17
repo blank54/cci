@@ -63,4 +63,4 @@ if __name__ == '__main__':
     print('============================================================')
     print('Save corpus')
 
-    newsio.save_corpus(corpus=corpus, fname_corpus=fname_corpus)
+    newsio.save(_object=corpus, _type='corpus', fname_object=fname_corpus)
