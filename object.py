@@ -406,3 +406,16 @@ class NaverNewsArticleParser(NewsCrawler):
 
         id = str(url.split('=')[-1])
         return id
+
+
+class Word:
+    def __init__(self, word):
+        self.word = word
+
+        self.tf = ''
+        self.df = ''
+        self.idf = ''
+        self.tfidf = ''
+
+    def __str__(self):
+        return word
