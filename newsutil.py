@@ -60,7 +60,7 @@ class NewsIO(NewsPath):
         return word_list
 
 
-class NewsFunc:
+class NewsFunc(NewsPath):
     def text2sents(self, text):
         '''
         text : a str object of doc.content

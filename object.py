@@ -408,6 +408,32 @@ class NaverNewsArticleParser(NewsCrawler):
         return id
 
 
+class NewsCorpus:
+    def __init__(self, fdir_corpus):
+        self.fdir_corpus = fdir_corpus
+
+    def iter(self, verbose=True):
+        if verbose:
+            for fname in tqdm(self.fdir_corpus):
+                fpath = os.path.sep.join((self.fdir_corpus, fname))
+                with open(fpath, 'rb') as f:
+                    yield pk.load(f)
+        else:
+            for fname in self.fdir_corpus:
+                fpath = os.path.sep.join((self.fdir_corpus, fname))
+                with open(fpath, 'rb') as f:
+                    yield pk.load(f)
+
+    def __len__(self):
+        return len(os.listdir(self.fdir_corpus))
+
+    def __iter__(self):
+        for fname in self.fdir_corpus:
+            fpath = os.path.sep.join((self.fdir_corpus, fname))
+            with open(fpath, 'rb') as f:
+                yield pk.load(f)
+
+
 class Word:
     def __init__(self, word):
         self.word = word
