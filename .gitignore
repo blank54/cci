@@ -28,5 +28,5 @@ test*
 *.h5
 
 # Corpus
-corpus/*
+corpus*
 data/*
