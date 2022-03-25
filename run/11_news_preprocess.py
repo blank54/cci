@@ -7,11 +7,14 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from newsutil import NewsIO
+from object import NewsCorpus
+from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
+newspath = NewsPath()
 
 import re
 import pickle as pk
+from datetime import datetime
 from tqdm import tqdm
 from pathlib import Path
 from copy import deepcopy
@@ -74,10 +77,6 @@ def remove_stopwords(sent, stoplist):
 
 if __name__ == '__main__':
     ## Filenames
-    fname_corpus = 'corpus_1000.pk'
-    fname_corpus_norm = f'{Path(fname_corpus).stem}_norm.pk'
-    fname_corpus_noun = f'{Path(fname_corpus).stem}_noun.pk'
-
     fname_trash_words = 'trashlist.txt'
     fname_stoplist = 'stoplist.txt'
 
@@ -87,46 +86,54 @@ if __name__ == '__main__':
 
     ## Data import
     print('============================================================')
+    print('--------------------------------------------------')
     print('Load corpus')
 
-    corpus = newsio.load(fname_object=fname_corpus, _type='corpus')
+    corpus = NewsCorpus(fdir_corpus=newspath.fdir_corpus)
+    DOCN = len(corpus)
+
+    print(f'  | Corpus: {DOCN:,}')
+
+    print('--------------------------------------------------')
+    print('Load thesaurus')
+
     trash_word_list = newsio.read_thesaurus(fname_thesaurus=fname_trash_words)
     stoplist = newsio.read_thesaurus(fname_thesaurus=fname_stoplist)
 
-    print(f'  | Corpus: {len(corpus):,}')
     print(f'  | Trash words: {trash_word_list}')
     print(f'  | Stopwords: {stoplist}')
 
-    ## Normalization
+    ## Preprocess
     print('============================================================')
-    print('Normalization')
+    print('Preprocess text data')
 
-    corpus_norm = {}
-    for doc in tqdm(corpus):
+    _start = datetime.now()
+    for idx, doc in enumerate(corpus):
+        ## Normalization
         normalized_text = text_normalize(text=doc.content)
         sents = parse_sent(text=normalized_text)
         normalized_sents = sent_normalize(sents=sents, MIN_SENT_LEN=MIN_SENT_LEN, TRASH_SENT_SCORE=TRASH_SENT_SCORE)
+        doc.normalized_sents = deepcopy(normalized_sents)
 
-        if normalized_sents:
-            corpus_norm[doc.id] = normalized_sents
-        else:
-            continue
-
-    newsio.save(_object=corpus_norm, _type='corpus', fname_object=fname_corpus_norm)
-
-    print(f'  | Normalized corpus: {len(corpus_norm):,}')
-
-    ## Tokenization, Stopword removal, and PoS tagging
-    print('============================================================')
-    print('Tokenization, Stopword removal, and PoS tagging')
-
-    corpus_noun = defaultdict(list)
-    for _id, sents in tqdm(corpus_norm.items()):
-        for sent in sents:
+        ## Tokenization, Stopword removal, and PoS tagging
+        for sent in doc.normalized_sents:
             nouns = komoran.nouns(sent)
+            doc.nouns = deepcopy(nouns)
+
             nouns_stop = remove_stopwords(sent=nouns, stoplist=stoplist)
-            corpus_noun[_id].append(nouns_stop)
+            doc.nouns_stop = deepcopy(nouns_stop)
 
-    newsio.save(_object=corpus_noun, _type='corpus', fname_object=fname_corpus_noun)
+        ## Save corpus
+        fpath_corpus = os.path.sep.join((newspath.fdir_corpus, doc.fname))
+        with open(fpath_corpus, 'wb') as f:
+            pk.dump(doc, f)
 
-    print(f'  | Noun extracted corpus: {len(corpus_noun):,}')
+        ## Verbose
+        if (idx+1) % 500 == 0:
+            _end = datetime.now()
+            running_time = _end - _start
+            # running_time_form = datetime(running_time).strftime('%H:%M:%S')
+            iter_time_avg = running_time/(idx+1)
+            remaining_time = iter_time_avg * (DOCN-(idx+1))
+
+            sys.stdout.write(f'\r  | {(idx+1):,}/{DOCN:,} [{str(running_time)}<{str(remaining_time)}, {str(iter_time_avg)}/iter]\t\t')

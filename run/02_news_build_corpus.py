@@ -15,6 +15,7 @@ import json
 import random
 import pickle as pk
 from tqdm import tqdm
+from copy import deepcopy
 random.seed(42)
 
 def build_corpus(**kwargs):
@@ -39,6 +40,7 @@ def build_corpus(**kwargs):
             fpath_corpus = os.path.sep.join((newspath.fdir_corpus, fname))
             with open(fpath_article, 'rb') as f:
                 article = pk.load(f)
+                article.fname = deepcopy(fname)
                 with open(fpath_corpus, 'wb') as g:
                     pk.dump(article, g)
                     cnt += 1
