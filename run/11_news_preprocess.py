@@ -108,7 +108,8 @@ if __name__ == '__main__':
     print('Preprocess text data')
 
     _start = datetime.now()
-    for idx, doc in enumerate(corpus):
+    # for idx, doc in enumerate(corpus):
+    for doc in corpus.iter():
         ## Normalization
         normalized_text = text_normalize(text=doc.content)
         sents = parse_sent(text=normalized_text)
@@ -128,12 +129,12 @@ if __name__ == '__main__':
         with open(fpath_corpus, 'wb') as f:
             pk.dump(doc, f)
 
-        ## Verbose
-        if (idx+1) % 500 == 0:
-            _end = datetime.now()
-            running_time = _end - _start
-            # running_time_form = datetime(running_time).strftime('%H:%M:%S')
-            iter_time_avg = running_time/(idx+1)
-            remaining_time = iter_time_avg * (DOCN-(idx+1))
+        # ## Verbose
+        # if (idx+1) % 500 == 0:
+        #     _end = datetime.now()
+        #     running_time = _end - _start
+        #     # running_time_form = datetime(running_time).strftime('%H:%M:%S')
+        #     iter_time_avg = running_time/(idx+1)
+        #     remaining_time = iter_time_avg * (DOCN-(idx+1))
 
-            sys.stdout.write(f'\r  | {(idx+1):,}/{DOCN:,} [{str(running_time)}<{str(remaining_time)}, {str(iter_time_avg)}/iter]\t\t')
+        #     sys.stdout.write(f'\r  | {(idx+1):,}/{DOCN:,} [{str(running_time)}<{str(remaining_time)}, {str(iter_time_avg)}/iter]\t\t')

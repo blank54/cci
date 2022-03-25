@@ -7,6 +7,7 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
+from object import NewsDate
 from newsutil import NewsPath, NewsIO
 newspath = NewsPath()
 newsio = NewsIO()
@@ -40,7 +41,10 @@ def build_corpus(**kwargs):
             fpath_corpus = os.path.sep.join((newspath.fdir_corpus, fname))
             with open(fpath_article, 'rb') as f:
                 article = pk.load(f)
+
                 article.fname = deepcopy(fname)
+                article.date = deepcopy(NewsDate(date=article.date))
+
                 with open(fpath_corpus, 'wb') as g:
                     pk.dump(article, g)
                     cnt += 1

@@ -8,6 +8,7 @@ import itertools
 import numpy as np
 import pickle as pk
 import pandas as pd
+from tqdm import tqdm
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -261,19 +262,23 @@ class NewsDate:
 
     def __init__(self, date):
         self.date = date
-        self.formatted = self.__convert_date()
+        self.yearmonth = self.__yearmonth()
+        self.datetime = self.__datetime()
 
     def __call__(self):
-        return self.formatted
+        return self.datetime
 
     def __str__(self):
         return '{}'.format(self.__call__())
 
-    def __convert_date(self):
+    def __datetime(self):
         try:
             return datetime.strptime(self.date, '%Y%m%d').strftime('%Y.%m.%d')
         except:
             return ''
+
+    def __yearmonth(self):
+        return datetime.strptime(self.date, '%Y%m%d').strftime('%Y%m')
 
 
 class NewsCrawler():
