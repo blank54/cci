@@ -1,0 +1,15 @@
+건설공사비지수  Construction Cost Index  CCI
+건설업 취업자 증감  Construction Employment Change  CEC
+공사지역 공종별 건설수주액  Regional Contract for Work Type  RCW
+공사지역 발주자별 건설수주액  Regional Contract for Client Type  RCC
+공종별 해외건설수주(금액)  Global Contract for Work Type  GCW
+공종별 건설기성액(경상)  Global Payment for Work Type  GPW
+공종별 건설기성액(계절조정)  Global Payment for Work Type (Seasonal Adjustment)  GPWS
+국내건설수주액  Domestic Contract  DC
+동수별 연면적별 건축착공현황  Construction State for Apartment Area  CSA
+발주자 공종별 건설수주액(경상)  Contract for Client and Work Type  CCW
+발주자별 건설기성액(경상)  Payment for Client  PC
+발주자별 건설기성액(계절조정)  Payment for Client (Seasonal Adjustment)  PCS
+전산업생산지수  Total Production Index  TPI
+지역별 해외건설수주(건수)  Global Contract Count  GCC
+지역별 해외건설수주(금액)  Global Contract Amount  GCA

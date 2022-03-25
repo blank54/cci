@@ -414,12 +414,12 @@ class NewsCorpus:
 
     def iter(self, verbose=True):
         if verbose:
-            for fname in tqdm(self.fdir_corpus):
+            for fname in tqdm(os.listdir(self.fdir_corpus)):
                 fpath = os.path.sep.join((self.fdir_corpus, fname))
                 with open(fpath, 'rb') as f:
                     yield pk.load(f)
         else:
-            for fname in self.fdir_corpus:
+            for fname in os.listdir(self.fdir_corpus):
                 fpath = os.path.sep.join((self.fdir_corpus, fname))
                 with open(fpath, 'rb') as f:
                     yield pk.load(f)
@@ -428,7 +428,7 @@ class NewsCorpus:
         return len(os.listdir(self.fdir_corpus))
 
     def __iter__(self):
-        for fname in self.fdir_corpus:
+        for fname in os.listdir(self.fdir_corpus):
             fpath = os.path.sep.join((self.fdir_corpus, fname))
             with open(fpath, 'rb') as f:
                 yield pk.load(f)
@@ -445,3 +445,28 @@ class Word:
 
     def __str__(self):
         return word
+
+
+class NumericMeta:
+    def __init__(self, fname, fdir):
+        self.fname = fname
+        self.fdir = fdir
+        self.fpath = os.path.sep.join((self.fdir, self.fname))
+
+        self.info = self.__read_metadata()
+        self.kor2eng = {k: e for k, e, a in self.info}
+        self.kor2abb = {k: a for k, e, a in self.info}
+        self.eng2kor = {e: k for k, e, a in self.info}
+        self.eng2abb = {e: a for k, e, a in self.info}
+        self.abb2kor = {a: k for k, e, a in self.info}
+        self.abb2eng = {a: e for k, e, a in self.info}
+
+    def __read_metadata(self):
+        with open(self.fpath, 'r', encoding='utf-8') as f:
+            return [row.split('  ') for row in f.read().strip().split('\n')]
+
+    def __len__(self):
+        return len(self.info)
+
+    def __str__(self):
+        return self.info
