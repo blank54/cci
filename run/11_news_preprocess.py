@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
     _start = datetime.now()
     # for idx, doc in enumerate(corpus):
-    for doc in corpus.iter(n=10):
+    for doc in corpus.iter():
         ## Normalization
         normalized_text = text_normalize(text=doc.content)
         sents = parse_sent(text=normalized_text)
