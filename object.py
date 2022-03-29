@@ -417,14 +417,14 @@ class NewsCorpus:
     def __init__(self, fdir_corpus):
         self.fdir_corpus = fdir_corpus
 
-    def iter(self, verbose=True):
-        if verbose:
-            for fname in tqdm(os.listdir(self.fdir_corpus)):
+    def iter(self, verbose=True, n=False):
+        if n:
+            for fname in tqdm(list(os.listdir(self.fdir_corpus))[:n]):
                 fpath = os.path.sep.join((self.fdir_corpus, fname))
                 with open(fpath, 'rb') as f:
                     yield pk.load(f)
         else:
-            for fname in os.listdir(self.fdir_corpus):
+            for fname in tqdm(os.listdir(self.fdir_corpus)):
                 fpath = os.path.sep.join((self.fdir_corpus, fname))
                 with open(fpath, 'rb') as f:
                     yield pk.load(f)

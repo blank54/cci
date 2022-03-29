@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
     _start = datetime.now()
     # for idx, doc in enumerate(corpus):
-    for doc in corpus.iter():
+    for doc in corpus.iter(n=10):
         ## Normalization
         normalized_text = text_normalize(text=doc.content)
         sents = parse_sent(text=normalized_text)
@@ -125,8 +125,8 @@ if __name__ == '__main__':
             doc.nouns_stop = deepcopy(nouns_stop)
 
         ## Save corpus
-        fpath_corpus = os.path.sep.join((newspath.fdir_corpus, doc.fname))
-        with open(fpath_corpus, 'wb') as f:
+        fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, doc.fname))
+        with open(fpath_article_preprocessed, 'wb') as f:
             pk.dump(doc, f)
 
         # ## Verbose
