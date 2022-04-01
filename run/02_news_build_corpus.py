@@ -17,14 +17,33 @@ import random
 import pickle as pk
 from tqdm import tqdm
 from copy import deepcopy
+from datetime import datetime
 random.seed(42)
+
+
+def save_corpus(article):
+    fpath_corpus = os.path.sep.join((newspath.fdir_corpus, article.fname))
+    with open(fpath_corpus, 'wb') as g:
+        pk.dump(article, g)
+
+def save_corpus_monthly(article):
+    yearmonth = datetime.strptime(article.date.datetime, '%Y.%m.%d').strftime('%Y%m')
+    fpath_corpus_monthly = os.path.sep.join((newspath.fdir_corpus_monthly, yearmonth, article.fname))
+
+    try:
+        os.makedirs(os.path.dirname(fpath_corpus_monthly), exist_ok=False)
+    except FileExistsError:
+        pass
+
+    with open(fpath_corpus_monthly, 'wb') as g:
+        pk.dump(article, g)
 
 def build_corpus(**kwargs):
     print('--------------------------------------------------')
     print('Find articles')
 
     fpath_article_list = []
-    for path, dirs, files in os.walk(newspath.fdir_article):
+    for path, dirs, files in os.walk(newspath.fdir_corpus):
         for fname in files:
             fpath_article = os.path.sep.join((path, fname))
             fpath_article_list.append(fpath_article)
@@ -37,28 +56,19 @@ def build_corpus(**kwargs):
     cnt = 0
     errors = []
     for fpath_article in tqdm(fpath_article_list):
-        try:
-            with open(fpath_article, 'rb') as f:
-                article = pk.load(f)
+        with open(fpath_article, 'rb') as f:
+            article = pk.load(f)
 
-                article.fname = deepcopy(os.path.basename(fpath_article))
-                article.date = deepcopy(NewsDate(date=article.date))
+            # article.fname = deepcopy(os.path.basename(fpath_article))
+            # article.date = deepcopy(NewsDate(date=article.date))
 
-                fpath_corpus = os.path.sep.join((newspath.fdir_corpus, article.fname))
-                with open(fpath_corpus, 'wb') as g:
-                    pk.dump(article, g)
-
-                month = datetime.strftime(article.date.datetime, '%Y%m').strptime('%m')
-                fpath_corpus_monthly = os.path.sep.join((newspath.fdir_corpus_monthly, month, article.fname))
-                with open(fpath_corpus_monthly, 'wb') as g:
-                    pk.dump(article, g)
-
+            # save_corpus(article=article)
+            save_corpus_monthly(article=article)
             cnt += 1
-        except Exception as e:
-            errors.append((fname, e))
 
     print(f'  | Corpus: {cnt:,}')
     print(f'  | Errors: {len(errors):,}')
+    return errors
 
 
 if __name__ == '__main__':
