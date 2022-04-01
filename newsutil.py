@@ -16,6 +16,7 @@ class NewsPath:
     fdir_query = os.path.sep.join((root, 'query'))
     fdir_data = os.path.sep.join((root, 'data'))
     fdir_corpus = os.path.sep.join((root, 'corpus'))
+    fdir_corpus_monthly = os.path.sep.join((root, 'corpus_monthly'))
     fdir_model = os.path.sep.join((root, 'model'))
     fdir_thesaurus = os.path.sep.join((root, 'thesaurus'))
 
@@ -60,7 +61,7 @@ class NewsIO(NewsPath):
         return word_list
 
 
-class NewsFunc:
+class NewsFunc(NewsPath):
     def text2sents(self, text):
         '''
         text : a str object of doc.content

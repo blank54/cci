@@ -8,6 +8,7 @@ import itertools
 import numpy as np
 import pickle as pk
 import pandas as pd
+from tqdm import tqdm
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -261,19 +262,23 @@ class NewsDate:
 
     def __init__(self, date):
         self.date = date
-        self.formatted = self.__convert_date()
+        self.yearmonth = self.__yearmonth()
+        self.datetime = self.__datetime()
 
     def __call__(self):
-        return self.formatted
+        return self.datetime
 
     def __str__(self):
         return '{}'.format(self.__call__())
 
-    def __convert_date(self):
+    def __datetime(self):
         try:
             return datetime.strptime(self.date, '%Y%m%d').strftime('%Y.%m.%d')
         except:
             return ''
+
+    def __yearmonth(self):
+        return datetime.strptime(self.date, '%Y%m%d').strftime('%Y%m')
 
 
 class NewsCrawler():
@@ -408,6 +413,38 @@ class NaverNewsArticleParser(NewsCrawler):
         return id
 
 
+class NewsCorpus:
+    def __init__(self, fdir_corpus):
+        self.fdir_corpus = fdir_corpus
+
+    def iter(self, verbose=True, n=False, **kwargs):
+        if n:
+            for fname in tqdm(list(os.listdir(self.fdir_corpus))[:n]):
+                fpath = os.path.sep.join((self.fdir_corpus, fname))
+                with open(fpath, 'rb') as f:
+                    yield pk.load(f)
+        else:
+            start = kwargs.get('start', 0)
+            end = kwargs.get('end', len(os.listdir(self.fdir_corpus)))
+
+            for fname in tqdm(os.listdir(self.fdir_corpus)[start:end]):
+                fpath = os.path.sep.join((self.fdir_corpus, fname))
+                try:
+                    with open(fpath, 'rb') as f:
+                        yield pk.load(f)
+                except:
+                    print(f'UnpicklingError: {fname}')
+
+    def __len__(self):
+        return len(os.listdir(self.fdir_corpus))
+
+    def __iter__(self):
+        for fname in os.listdir(self.fdir_corpus):
+            fpath = os.path.sep.join((self.fdir_corpus, fname))
+            with open(fpath, 'rb') as f:
+                yield pk.load(f)
+
+
 class Word:
     def __init__(self, word):
         self.word = word
@@ -419,3 +456,28 @@ class Word:
 
     def __str__(self):
         return word
+
+
+class NumericMeta:
+    def __init__(self, fname, fdir):
+        self.fname = fname
+        self.fdir = fdir
+        self.fpath = os.path.sep.join((self.fdir, self.fname))
+
+        self.info = self.__read_metadata()
+        self.kor2eng = {k: e for k, e, a in self.info}
+        self.kor2abb = {k: a for k, e, a in self.info}
+        self.eng2kor = {e: k for k, e, a in self.info}
+        self.eng2abb = {e: a for k, e, a in self.info}
+        self.abb2kor = {a: k for k, e, a in self.info}
+        self.abb2eng = {a: e for k, e, a in self.info}
+
+    def __read_metadata(self):
+        with open(self.fpath, 'r', encoding='utf-8') as f:
+            return [row.split('  ') for row in f.read().strip().split('\n')]
+
+    def __len__(self):
+        return len(self.info)
+
+    def __str__(self):
+        return self.info

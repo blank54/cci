@@ -7,11 +7,14 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from newsutil import NewsIO
+from object import NewsCorpus
+from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
+newspath = NewsPath()
 
 import re
 import pickle as pk
+from datetime import datetime
 from tqdm import tqdm
 from pathlib import Path
 from copy import deepcopy
@@ -21,7 +24,7 @@ from konlpy.tag import Komoran
 komoran = Komoran()
 
 
-def text_normalize(text):
+def normalize_text(text):
     text = deepcopy(re.sub('[^a-zA-Z0-9ㄱ-ㅣ가-힣\s\(\)\.]', '', text))
     text = deepcopy(re.sub('\s+', ' ', text).strip())
     text = deepcopy(re.sub('\.+', '.', text).strip())
@@ -53,80 +56,71 @@ def concatenate_short_sent(sents, MIN_SENT_LEN):
     
     return output_sents
 
-def sent_normalize(sents, MIN_SENT_LEN, TRASH_SENT_SCORE):
-    global trash_word_list
-
-    concatenated_sents = concatenate_short_sent(sents=sents, MIN_SENT_LEN=MIN_SENT_LEN)
-
-    output_sents = []
-    for sent in concatenated_sents:
-        trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
-        if trash_score < TRASH_SENT_SCORE:
-            output_sents.append(sent)
-        else:
-            continue
-    
-    return output_sents
-
 def remove_stopwords(sent, stoplist):
     return [w for w in sent if w not in stoplist]
 
 
 if __name__ == '__main__':
     ## Filenames
-    fname_corpus = 'corpus_1000.pk'
-    fname_corpus_norm = f'{Path(fname_corpus).stem}_norm.pk'
-    fname_corpus_noun = f'{Path(fname_corpus).stem}_noun.pk'
-
     fname_trash_words = 'trashlist.txt'
     fname_stoplist = 'stoplist.txt'
 
     ## Parameters
     MIN_SENT_LEN = 3
-    TRASH_SENT_SCORE = 2
+    MAX_TRASH_SCORE = 2
 
     ## Data import
     print('============================================================')
+    print('--------------------------------------------------')
     print('Load corpus')
 
-    corpus = newsio.load(fname_object=fname_corpus, _type='corpus')
+    corpus = NewsCorpus(fdir_corpus=newspath.fdir_corpus)
+    DOCN = len(corpus)
+
+    print(f'  | Corpus: {DOCN:,}')
+
+    print('--------------------------------------------------')
+    print('Load thesaurus')
+
     trash_word_list = newsio.read_thesaurus(fname_thesaurus=fname_trash_words)
     stoplist = newsio.read_thesaurus(fname_thesaurus=fname_stoplist)
 
-    print(f'  | Corpus: {len(corpus):,}')
     print(f'  | Trash words: {trash_word_list}')
     print(f'  | Stopwords: {stoplist}')
 
-    ## Normalization
+    ## Main
     print('============================================================')
-    print('Normalization')
+    print('Preprocess text data')
 
-    corpus_norm = {}
-    for doc in tqdm(corpus):
-        normalized_text = text_normalize(text=doc.content)
+    _start = datetime.now()
+    for doc in corpus.iter():
+        try:
+            if doc.preprocess == True:
+                continue
+            else:
+                pass
+        except AttributeError:
+            pass
+
+        ## Preprocess
+        normalized_text = normalize_text(text=doc.content)
         sents = parse_sent(text=normalized_text)
-        normalized_sents = sent_normalize(sents=sents, MIN_SENT_LEN=MIN_SENT_LEN, TRASH_SENT_SCORE=TRASH_SENT_SCORE)
+        concatenated_sents = concatenate_short_sent(sents, MIN_SENT_LEN=MIN_SENT_LEN)
 
-        if normalized_sents:
-            corpus_norm[doc.id] = normalized_sents
-        else:
-            continue
+        doc.normalized_sents, doc.nouns, doc.nouns_stop = [], [], []
+        for sent in concatenated_sents:
+            trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
+            if trash_score < MAX_TRASH_SCORE:
+                nouns = komoran.nouns(sent)
 
-    newsio.save(_object=corpus_norm, _type='corpus', fname_object=fname_corpus_norm)
+                doc.normalized_sents.append(sent)
+                doc.nouns.append(nouns)
+                doc.nouns_stop.append(remove_stopwords(sent=nouns, stoplist=stoplist))
+            else:
+                continue
 
-    print(f'  | Normalized corpus: {len(corpus_norm):,}')
-
-    ## Tokenization, Stopword removal, and PoS tagging
-    print('============================================================')
-    print('Tokenization, Stopword removal, and PoS tagging')
-
-    corpus_noun = defaultdict(list)
-    for _id, sents in tqdm(corpus_norm.items()):
-        for sent in sents:
-            nouns = komoran.nouns(sent)
-            nouns_stop = remove_stopwords(sent=nouns, stoplist=stoplist)
-            corpus_noun[_id].append(nouns_stop)
-
-    newsio.save(_object=corpus_noun, _type='corpus', fname_object=fname_corpus_noun)
-
-    print(f'  | Noun extracted corpus: {len(corpus_noun):,}')
+        ## Save corpus
+        doc.preprocess = True
+        fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, doc.fname))
+        with open(fpath_article_preprocessed, 'wb') as f:
+            pk.dump(doc, f)

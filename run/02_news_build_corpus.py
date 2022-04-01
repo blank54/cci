@@ -7,60 +7,78 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
+from object import NewsDate
 from newsutil import NewsPath, NewsIO
 newspath = NewsPath()
 newsio = NewsIO()
 
+import json
 import random
 import pickle as pk
 from tqdm import tqdm
+from copy import deepcopy
 random.seed(42)
 
 def build_corpus(**kwargs):
     print('--------------------------------------------------')
     print('Find articles')
 
-    flist = []
+    fpath_article_list = []
     for path, dirs, files in os.walk(newspath.fdir_article):
-        flist.extend([os.path.sep.join((path, fname)) for fname in files])
+        for fname in files:
+            fpath_article = os.path.sep.join((path, fname))
+            fpath_article_list.append(fpath_article)
 
-    print(f'  | Total: {len(flist):,}')
-
-    SAMPLE_SIZE = kwargs.get('SAMPLE_SIZE', '')
-    if SAMPLE_SIZE:
-        flist = random.sample(flist, SAMPLE_SIZE)
-        print(f'  | Sample size: {SAMPLE_SIZE:,}')
-    else:
-        pass
+    print(f'  | Articles: {len(fpath_article_list):,}')
 
     print('--------------------------------------------------')
     print('Articles -> Corpus')
 
-    corpus = []
-    for fpath in tqdm(flist):
-        with open(fpath, 'rb') as f:
-            corpus.append(pk.load(f))
+    cnt = 0
+    errors = []
+    for fpath_article in tqdm(fpath_article_list):
+        try:
+            with open(fpath_article, 'rb') as f:
+                article = pk.load(f)
 
-    print(f'  | Corpus: {len(corpus):,}')
+                article.fname = deepcopy(os.path.basename(fpath_article))
+                article.date = deepcopy(NewsDate(date=article.date))
 
-    return corpus
+                fpath_corpus = os.path.sep.join((newspath.fdir_corpus, article.fname))
+                with open(fpath_corpus, 'wb') as g:
+                    pk.dump(article, g)
+
+                month = datetime.strftime(article.date.datetime, '%Y%m').strptime('%m')
+                fpath_corpus_monthly = os.path.sep.join((newspath.fdir_corpus_monthly, month, article.fname))
+                with open(fpath_corpus_monthly, 'wb') as g:
+                    pk.dump(article, g)
+
+            cnt += 1
+        except Exception as e:
+            errors.append((fname, e))
+
+    print(f'  | Corpus: {cnt:,}')
+    print(f'  | Errors: {len(errors):,}')
 
 
 if __name__ == '__main__':
-    ## Parameters
-    SAMPLE_SIZE = 1000
-
-    ## Filenames
-    fname_corpus = f'corpus_{str(SAMPLE_SIZE)}.pk'
-
-    ## Build corpus
+    ## Main
     print('============================================================')
     print('Build corpus')
 
-    corpus = build_corpus(SAMPLE_SIZE=SAMPLE_SIZE)
+    errors = build_corpus()
 
-    ## Save corpus
-    print('============================================================')
-    print('Save corpus')
+    ## Save errors
+    if errors:
+        print('============================================================')
+        print('Save errors')
 
-    newsio.save(_object=corpus, _type='corpus', fname_object=fname_corpus)
+        fname_errors = 'corpus_errors.json'
+        fpath_errors = os.path.sep.join((newspath.fdir_data, fname_errors))
+        with open(fpath_errors, 'wb') as f:
+            json.dump(errors, f)
+
+        print(f'  | fdir : {newspath.fdir_data}')
+        print(f'  | fname: {fname_errors}')
+    else:
+        pass
