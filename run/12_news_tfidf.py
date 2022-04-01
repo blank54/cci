@@ -13,6 +13,7 @@ newsio = NewsIO()
 newspath = NewsPath()
 
 import numpy as np
+import itertools
 from tqdm import tqdm
 from collections import defaultdict
 
@@ -25,12 +26,15 @@ def build_counter(do_build_counter, **kwargs):
 
         word_counter = defaultdict(int)
         doc_counter = defaultdict(int)
+        attribute_errors = []
         for doc in corpus.iter():
-            for w in doc.nouns_stop:
-                word_counter[w] += 1
-
-            for w in set(doc.nouns_stop):
-                doc_counter[w] += 1
+            try:
+                for w in itertools.chain(*doc.nouns_stop):
+                        word_counter[w] += 1
+                for w in set(itertools.chain(*doc.nouns_stop)):
+                    doc_counter[w] += 1
+            except AttributeError:
+                attribute_errors.append(doc)
 
         newsio.save(_object=word_counter, _type='model', fname_object=fname_word_counter, verbose=False)
         newsio.save(_object=doc_counter, _type='model', fname_object=fname_doc_counter, verbose=False)
@@ -38,6 +42,7 @@ def build_counter(do_build_counter, **kwargs):
         print(f'  | fdir : {newspath.fdir_model}')
         print(f'  | fname_word_counter: {fname_word_counter}')
         print(f'  | fname_doc_counter: {fname_doc_counter}')
+        print(F'  | errors: {len(attribute_errors):,}')
 
     else:
         word_counter = newsio.load(fname_object=fname_word_counter, _type='model', verbose=False)
@@ -63,7 +68,7 @@ def build_tfidf(do_build_tfidf, **kwargs):
 
             tfidf[w] = word
 
-        newsio.save(_object=word_counter, _type='model', fname_object=fname_word_counter, verbose=False)
+        newsio.save(_object=tfidf, _type='model', fname_object=fname_tfidf, verbose=False)
 
     else:
         tfidf = newsio.load(fname_object=fname_tfidf, _type='model', verbose=False)
@@ -78,8 +83,8 @@ if __name__ == '__main__':
     fname_doc_counter = 'doc_counter.pk'
 
     ## Parameters
-    do_build_counter = True
-    do_build_tfidf = True
+    do_build_counter = False
+    do_build_tfidf = False
 
     ## Data import
     print('============================================================')
@@ -96,7 +101,7 @@ if __name__ == '__main__':
     print('Frequency counter')
 
     word_counter, doc_counter = build_counter(corpus=corpus, do_build_counter=do_build_counter)
-    print(f'  | {len(word_counter)} words in word_counter')
+    print(f'  | {len(word_counter):,} words in word_counter')
 
     print('--------------------------------------------------')
     print('TF-IDF')
@@ -104,6 +109,6 @@ if __name__ == '__main__':
     tfidf = build_tfidf(corpus=corpus, word_counter=word_counter, doc_counter=doc_counter, do_build_tfidf=do_build_tfidf)
     print(f'  | {len(tfidf)} words in tfidf')    
 
-    print('  | Word     TF     DF     IDF     TF-IDF')
-    for w, word in sorted(tfidf.items())[:10]:
-        print('  | {:}  //  {:}  //  {:}  //  {:,.02f}  //  {:,.02f}'.format(word.word, word.tf, word.df, word.idf, word.tfidf))
+    print('  | Word          TF          DF          IDF          TF-IDF')
+    for w, word in sorted(tfidf.items(), key=lambda x:x[1].tfidf, reverse=True)[:30]:
+        print('  | {:}  //  {:,}  //  {:,}  //  {:,.02f}  //  {:,.02f}'.format(word.word, word.tf, word.df, word.idf, word.tfidf))
