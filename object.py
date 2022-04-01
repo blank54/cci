@@ -429,8 +429,11 @@ class NewsCorpus:
 
             for fname in tqdm(os.listdir(self.fdir_corpus)[start:end]):
                 fpath = os.path.sep.join((self.fdir_corpus, fname))
-                with open(fpath, 'rb') as f:
-                    yield pk.load(f)
+                try:
+                    with open(fpath, 'rb') as f:
+                        yield pk.load(f)
+                except:
+                    print(f'UnpicklingError: {fname}')
 
     def __len__(self):
         return len(os.listdir(self.fdir_corpus))

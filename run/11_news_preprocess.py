@@ -24,7 +24,7 @@ from konlpy.tag import Komoran
 komoran = Komoran()
 
 
-def text_normalize(text):
+def normalize_text(text):
     text = deepcopy(re.sub('[^a-zA-Z0-9ㄱ-ㅣ가-힣\s\(\)\.]', '', text))
     text = deepcopy(re.sub('\s+', ' ', text).strip())
     text = deepcopy(re.sub('\.+', '.', text).strip())
@@ -56,21 +56,6 @@ def concatenate_short_sent(sents, MIN_SENT_LEN):
     
     return output_sents
 
-def sent_normalize(sents, MIN_SENT_LEN, TRASH_SENT_SCORE):
-    global trash_word_list
-
-    concatenated_sents = concatenate_short_sent(sents=sents, MIN_SENT_LEN=MIN_SENT_LEN)
-
-    output_sents = []
-    for sent in concatenated_sents:
-        trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
-        if trash_score < TRASH_SENT_SCORE:
-            output_sents.append(sent)
-        else:
-            continue
-    
-    return output_sents
-
 def remove_stopwords(sent, stoplist):
     return [w for w in sent if w not in stoplist]
 
@@ -82,7 +67,7 @@ if __name__ == '__main__':
 
     ## Parameters
     MIN_SENT_LEN = 3
-    TRASH_SENT_SCORE = 2
+    MAX_TRASH_SCORE = 2
 
     ## Data import
     print('============================================================')
@@ -103,38 +88,39 @@ if __name__ == '__main__':
     print(f'  | Trash words: {trash_word_list}')
     print(f'  | Stopwords: {stoplist}')
 
-    ## Preprocess
+    ## Main
     print('============================================================')
     print('Preprocess text data')
 
     _start = datetime.now()
-    # for idx, doc in enumerate(corpus):
     for doc in corpus.iter():
-        ## Normalization
-        normalized_text = text_normalize(text=doc.content)
+        try:
+            if doc.preprocess == True:
+                continue
+            else:
+                pass
+        except AttributeError:
+            pass
+
+        ## Preprocess
+        normalized_text = normalize_text(text=doc.content)
         sents = parse_sent(text=normalized_text)
-        normalized_sents = sent_normalize(sents=sents, MIN_SENT_LEN=MIN_SENT_LEN, TRASH_SENT_SCORE=TRASH_SENT_SCORE)
-        doc.normalized_sents = deepcopy(normalized_sents)
+        concatenated_sents = concatenate_short_sent(sents, MIN_SENT_LEN=MIN_SENT_LEN)
 
-        ## Tokenization, Stopword removal, and PoS tagging
-        for sent in doc.normalized_sents:
-            nouns = komoran.nouns(sent)
-            doc.nouns = deepcopy(nouns)
+        doc.normalized_sents, doc.nouns, doc.nouns_stop = [], [], []
+        for sent in concatenated_sents:
+            trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
+            if trash_score < MAX_TRASH_SCORE:
+                nouns = komoran.nouns(sent)
 
-            nouns_stop = remove_stopwords(sent=nouns, stoplist=stoplist)
-            doc.nouns_stop = deepcopy(nouns_stop)
+                doc.normalized_sents.append(sent)
+                doc.nouns.append(nouns)
+                doc.nouns_stop.append(remove_stopwords(sent=nouns, stoplist=stoplist))
+            else:
+                continue
 
         ## Save corpus
+        doc.preprocess = True
         fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, doc.fname))
         with open(fpath_article_preprocessed, 'wb') as f:
             pk.dump(doc, f)
-
-        # ## Verbose
-        # if (idx+1) % 500 == 0:
-        #     _end = datetime.now()
-        #     running_time = _end - _start
-        #     # running_time_form = datetime(running_time).strftime('%H:%M:%S')
-        #     iter_time_avg = running_time/(idx+1)
-        #     remaining_time = iter_time_avg * (DOCN-(idx+1))
-
-        #     sys.stdout.write(f'\r  | {(idx+1):,}/{DOCN:,} [{str(running_time)}<{str(remaining_time)}, {str(iter_time_avg)}/iter]\t\t')
