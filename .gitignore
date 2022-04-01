@@ -26,6 +26,8 @@ test*
 *.png
 *.csv
 *.h5
+*.pk
+*.json
 
 # Corpus
 corpus*
