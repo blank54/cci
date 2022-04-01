@@ -59,10 +59,10 @@ def build_corpus(**kwargs):
         with open(fpath_article, 'rb') as f:
             article = pk.load(f)
 
-            # article.fname = deepcopy(os.path.basename(fpath_article))
-            # article.date = deepcopy(NewsDate(date=article.date))
+            article.fname = deepcopy(os.path.basename(fpath_article))
+            article.date = deepcopy(NewsDate(date=article.date))
 
-            # save_corpus(article=article)
+            save_corpus(article=article)
             save_corpus_monthly(article=article)
             cnt += 1
 
