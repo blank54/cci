@@ -23,31 +23,37 @@ def build_corpus(**kwargs):
     print('--------------------------------------------------')
     print('Find articles')
 
-    flist = []
+    fpath_article_list = []
     for path, dirs, files in os.walk(newspath.fdir_article):
         for fname in files:
-            flist.append(fname)
+            fpath_article = os.path.sep.join((path, fname))
+            fpath_article_list.append(fpath_article)
 
-    print(f'  | Articles: {len(flist):,}')
+    print(f'  | Articles: {len(fpath_article_list):,}')
 
     print('--------------------------------------------------')
     print('Articles -> Corpus')
 
     cnt = 0
     errors = []
-    for fname in tqdm(flist):
+    for fpath_article in tqdm(fpath_article_list):
         try:
-            fpath_article = os.path.sep.join((path, fname))
-            fpath_corpus = os.path.sep.join((newspath.fdir_corpus, fname))
             with open(fpath_article, 'rb') as f:
                 article = pk.load(f)
 
-                article.fname = deepcopy(fname)
+                article.fname = deepcopy(os.path.basename(fpath_article))
                 article.date = deepcopy(NewsDate(date=article.date))
 
+                fpath_corpus = os.path.sep.join((newspath.fdir_corpus, article.fname))
                 with open(fpath_corpus, 'wb') as g:
                     pk.dump(article, g)
-                    cnt += 1
+
+                month = datetime.strftime(article.date.datetime, '%Y%m').strptime('%m')
+                fpath_corpus_monthly = os.path.sep.join((newspath.fdir_corpus_monthly, month, article.fname))
+                with open(fpath_corpus_monthly, 'wb') as g:
+                    pk.dump(article, g)
+
+            cnt += 1
         except Exception as e:
             errors.append((fname, e))
 
@@ -56,7 +62,7 @@ def build_corpus(**kwargs):
 
 
 if __name__ == '__main__':
-    ## Build corpus
+    ## Main
     print('============================================================')
     print('Build corpus')
 
@@ -67,11 +73,12 @@ if __name__ == '__main__':
         print('============================================================')
         print('Save errors')
 
-        fpath_errors = os.path.sep.join((newspath.fdir_data, 'corpus_errors.json'))
+        fname_errors = 'corpus_errors.json'
+        fpath_errors = os.path.sep.join((newspath.fdir_data, fname_errors))
         with open(fpath_errors, 'wb') as f:
             json.dump(errors, f)
 
         print(f'  | fdir : {newspath.fdir_data}')
-        print('  | fname: corpus_errors.json')
+        print(f'  | fname: {fname_errors}')
     else:
         pass
