@@ -43,7 +43,7 @@ def build_corpus(**kwargs):
     print('Find articles')
 
     fpath_article_list = []
-    for path, dirs, files in os.walk(newspath.fdir_corpus):
+    for path, dirs, files in os.walk(newspath.fdir_article):
         for fname in files:
             fpath_article = os.path.sep.join((path, fname))
             fpath_article_list.append(fpath_article)

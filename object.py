@@ -417,6 +417,9 @@ class NewsCorpus:
     def __init__(self, fdir_corpus):
         self.fdir_corpus = fdir_corpus
 
+    def __len__(self):
+        return len(os.listdir(self.fdir_corpus))
+
     def iter(self, verbose=True, n=False, **kwargs):
         if n:
             for fname in tqdm(list(os.listdir(self.fdir_corpus))[:n]):
@@ -435,14 +438,30 @@ class NewsCorpus:
                 except:
                     print(f'UnpicklingError: {fname}')
 
-    def __len__(self):
-        return len(os.listdir(self.fdir_corpus))
 
-    def __iter__(self):
-        for fname in os.listdir(self.fdir_corpus):
-            fpath = os.path.sep.join((self.fdir_corpus, fname))
-            with open(fpath, 'rb') as f:
-                yield pk.load(f)
+class NewsMonthlyCorpus:
+    def __init__(self, fdir_corpus):
+        self.fdir_corpus = fdir_corpus
+        self.yearmonth_list = sorted(os.listdir(self.fdir_corpus), reverse=False)
+        self.start = self.yearmonth_list[0]
+        self.end = self.yearmonth_list[-1]
+
+    def __len__(self):
+        return len(self.yearmonth_list)
+
+    def iter(self, **kwargs):
+        start = kwargs.get('start', self.start)
+        end = kwargs.get('end', self.end)
+
+        for yearmonth in tqdm(self.yearmonth_list):
+            fdir_corpus_yearmonth = os.path.sep.join((self.fdir_corpus, yearmonth))
+            corpus_yearmonth = []
+            for fname in os.listdir(fdir_corpus_yearmonth):
+                fpath = os.path.sep.join((fdir_corpus_yearmonth, fname))
+                with open(fpath, 'rb') as f:
+                    corpus_yearmonth.append(pk.load(f))
+
+            yield corpus_yearmonth
 
 
 class Word:
