@@ -59,6 +59,43 @@ def concatenate_short_sent(sents, MIN_SENT_LEN):
 def remove_stopwords(sent, stoplist):
     return [w for w in sent if w not in stoplist]
 
+def preprocess(corpus):
+    _start = datetime.now()
+    for article in corpus.iter():
+        try:
+            if article.preprocess == True:
+                continue
+            else:
+                pass
+        except AttributeError:
+            pass
+
+        ## Preprocess
+        normalized_text = normalize_text(text=article.content)
+        sents = parse_sent(text=normalized_text)
+        concatenated_sents = concatenate_short_sent(sents, MIN_SENT_LEN=MIN_SENT_LEN)
+
+        article.normalized_sents, article.nouns, article.nouns_stop = [], [], []
+        for sent in concatenated_sents:
+            trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
+            if trash_score < MAX_TRASH_SCORE:
+                nouns = komoran.nouns(sent)
+
+                article.normalized_sents.append(sent)
+                article.nouns.append(nouns)
+                article.nouns_stop.append(remove_stopwords(sent=nouns, stoplist=stoplist))
+            else:
+                continue
+
+        ## Save corpus
+        article.preprocess = True
+        fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, article.fname))
+        with open(fpath_article_preprocessed, 'wb') as f:
+            pk.dump(article, f)
+
+        ## Save corpus monthly
+        newsio.save_corpus_monthly(article=article)
+
 
 if __name__ == '__main__':
     ## Filenames
@@ -68,6 +105,8 @@ if __name__ == '__main__':
     ## Parameters
     MIN_SENT_LEN = 3
     MAX_TRASH_SCORE = 2
+
+    DO_PREPROCESS = False
 
     ## Data import
     print('============================================================')
@@ -90,37 +129,14 @@ if __name__ == '__main__':
 
     ## Main
     print('============================================================')
+    print('--------------------------------------------------')
     print('Preprocess text data')
 
-    _start = datetime.now()
-    for doc in corpus.iter():
-        try:
-            if doc.preprocess == True:
-                continue
-            else:
-                pass
-        except AttributeError:
-            pass
+    if DO_PREPROCESS:
+        preprocess(corpus=corpus)
+    else:
+        pass
 
-        ## Preprocess
-        normalized_text = normalize_text(text=doc.content)
-        sents = parse_sent(text=normalized_text)
-        concatenated_sents = concatenate_short_sent(sents, MIN_SENT_LEN=MIN_SENT_LEN)
+    print('--------------------------------------------------')
+    print('Evaluation')
 
-        doc.normalized_sents, doc.nouns, doc.nouns_stop = [], [], []
-        for sent in concatenated_sents:
-            trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
-            if trash_score < MAX_TRASH_SCORE:
-                nouns = komoran.nouns(sent)
-
-                doc.normalized_sents.append(sent)
-                doc.nouns.append(nouns)
-                doc.nouns_stop.append(remove_stopwords(sent=nouns, stoplist=stoplist))
-            else:
-                continue
-
-        ## Save corpus
-        doc.preprocess = True
-        fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, doc.fname))
-        with open(fpath_article_preprocessed, 'wb') as f:
-            pk.dump(doc, f)
