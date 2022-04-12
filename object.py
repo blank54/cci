@@ -16,6 +16,11 @@ from urllib import request
 from urllib.parse import quote
 from bs4 import BeautifulSoup
 
+import gensim.corpora as corpora
+from gensim.models.ldamodel import LdaModel
+from gensim.models import CoherenceModel
+import pyLDAvis.gensim
+
 
 class NewsStatus:
     '''
@@ -440,19 +445,23 @@ class NewsCorpus:
 
 
 class NewsMonthlyCorpus:
-    def __init__(self, fdir_corpus):
+    def __init__(self, fdir_corpus, **kwargs):
         self.fdir_corpus = fdir_corpus
-        self.yearmonth_list = sorted(os.listdir(self.fdir_corpus), reverse=False)
-        self.start = self.yearmonth_list[0]
-        self.end = self.yearmonth_list[-1]
+        self.flist = sorted(os.listdir(self.fdir_corpus), reverse=False)
+
+        self.start = kwargs.get('start', self.flist[0])
+        self.end = kwargs.get('end', self.flist[-1])
+        self.yearmonth_list = self.__get_yearmonth_list()
 
     def __len__(self):
         return len(self.yearmonth_list)
 
-    def iter(self, **kwargs):
-        start = kwargs.get('start', self.start)
-        end = kwargs.get('end', self.end)
+    def __get_yearmonth_list(self):
+        yearmonth_start = datetime.strptime(self.start, '%Y%m').strftime('%Y-%m-%d')
+        yearmonth_end = datetime.strptime(self.end, '%Y%m').strftime('%Y-%m-%d')
+        return pd.date_range(yearmonth_start, yearmonth_end, freq='MS').strftime('%Y%m').tolist()
 
+    def iter(self):
         for yearmonth in tqdm(self.yearmonth_list):
             fdir_corpus_yearmonth = os.path.sep.join((self.fdir_corpus, yearmonth))
             corpus_yearmonth = []
@@ -475,6 +484,53 @@ class Word:
 
     def __str__(self):
         return word
+
+
+# class NewsTopicModel:
+#     def __init__(self, docs, num_topics):
+#         self.docs = docs
+#         self.id2word = corpora.Dictionary(self.docs.values())
+
+#         self.model = ''
+#         self.coherence = ''
+
+#         self.num_topics = num_topics
+#         self.docs_for_lda = [self.id2word.doc2bow(text) for text in self.docs.values()]
+
+#         self.tag2topic = {}
+#         self.topic2tag = defaultdict(list)
+
+#     def fit(self, **kwargs):
+#         parameters = kwargs.get('parameters', {})
+#         self.model = LdaModel(corpus=self.docs_for_lda,
+#                               id2word=self.id2word,
+#                               num_topics=self.num_topics,
+#                               iterations=parameters.get('iterations', 100),
+#                               update_every=parameters.get('update_every', 1),
+#                               chunksize=parameters.get('chunksize', 100),
+#                               passes=parameters.get('passes', 10),
+#                               alpha=parameters.get('alpha', 0.5),
+#                               eta=parameters.get('eta', 0.5),
+#                               )
+
+#         self.__calculate_coherence()
+
+#     def __calculate_coherence(self):
+#         coherence_model = CoherenceModel(model=self.model,
+#                                          texts=self.docs.values(),
+#                                          dictionary=self.id2word)
+#         self.coherence = coherence_model.get_coherence()
+
+#     def assign(self):
+#         doc2topic = self.model[self.docs_for_lda]
+
+#         for idx, tag in enumerate(self.docs_for_lda):
+#             topic_id = sorted(doc2topic[idx], key=lambda x:x[1], reverse=True)[0][0]
+#             self.tag2topic[tag] = topic_id
+#             self.topic2tag[topic_id].append(tag)
+
+#     def visualize(self):
+#         pyLDAvis.gensim.prepare(self.model, self.docs_for_lda, self.id2word)
 
 
 class NumericMeta:
