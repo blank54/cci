@@ -88,13 +88,14 @@ def preprocess(corpus):
                 continue
 
         ## Save corpus
-        article.preprocess = True
-        fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, article.fname))
-        with open(fpath_article_preprocessed, 'wb') as f:
-            pk.dump(article, f)
+        if article.nouns_stop:
+            article.preprocess = True
+            fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, article.fname))
+            with open(fpath_article_preprocessed, 'wb') as f:
+                pk.dump(article, f)
 
-        ## Save corpus monthly
-        newsio.save_corpus_monthly(article=article)
+            ## Save corpus monthly
+            newsio.save_corpus_monthly(article=article)
 
 
 if __name__ == '__main__':
