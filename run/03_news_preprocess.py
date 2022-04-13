@@ -7,7 +7,7 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsCorpus
+from newscorpus import NewsCorpus
 from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()

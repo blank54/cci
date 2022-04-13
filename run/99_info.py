@@ -16,6 +16,73 @@ import pickle as pk
 from collections import defaultdict
 
 
+# class NewsStatus:
+#     '''
+#     A class to print status of web crawling.
+
+#     Methods
+#     -------
+#     queries
+#         | Print the history of queries.
+#         | The query files should start with "query_".
+#     urls
+#         | Print the number of url list.
+#     articles
+#         | Print the number of article list.
+#     '''
+
+#     def queries(self, fdir_queries):
+#         history = defaultdict(list)
+
+#         for fname in sorted(os.listdir(fdir_queries)):
+#             if not fname.startswith('query_'):
+#                 continue
+
+#             collected_date = fname.replace('.txt', '').split('_')[1]
+#             fpath_query = os.path.join(fdir_queries, fname)
+#             query_list, date_list = NewsQueryParser().parse(fpath_query)
+
+#             history['collected_date'].append(collected_date)
+#             history['date_start'].append(date_list[0])
+#             history['date_end'].append(date_list[-1])
+#             history['num_query'].append(len(query_list))
+#             history['query'].append(', '.join(query_list))
+
+#         print('============================================================')
+#         print('Status: Queries')
+#         print('  | fdir: {}'.format(fdir_queries))
+#         print('  | {:>13} {:>10} {:>10} {:>12} {:>15}'.format('CollectedDate', 'DateStart', 'DateEnd', 'NumOfQuery', 'Query'))
+#         history_df = pd.DataFrame(history)
+#         for i in range(len(history_df)):
+#             collected_date = history_df.iloc[i]['collected_date']
+#             date_start = history_df.iloc[i]['date_start']
+#             date_end = history_df.iloc[i]['date_end']
+#             num_query = history_df.iloc[i]['num_query']
+#             query = history_df.iloc[i]['query']
+#             print('  | {:>13} {:>10} {:>10} {:>12} {:>12}, ...'.format(collected_date, date_start, date_end, num_query, query[:10]))
+
+#     def urls(self, fdir_urls):
+#         urls = []
+#         for fname in os.listdir(fdir_urls):
+#             fpath_urls = os.path.join(fdir_urls, fname)
+#             with open(fpath_urls, 'rb') as f:
+#                 urls.extend(pk.load(f))
+
+#         urls_distinct = list(set(urls))
+#         print('============================================================')
+#         print('Status: URLs')
+#         print('  | fdir: {}'.format(fdir_urls))
+#         print('  | Total # of urls: {:,}'.format(len(urls_distinct)))
+
+#     def articles(self, fdir_articles):
+#         flist = os.listdir(fdir_articles)
+
+#         print('============================================================')
+#         print('Status: Articles')
+#         print('  | fdir: {}'.format(fdir_articles))
+#         print('  | Total: {:,}'.format(len(flist)))
+
+
 if __name__ == '__main__':
     ## URLs
     print('============================================================')

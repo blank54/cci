@@ -11,10 +11,12 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsMonthlyCorpus
+from object import NewsCorpus
 from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()
+
+import itertools
 
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
@@ -22,10 +24,15 @@ from sklearn.model_selection import GridSearchCV
 
 
 def prepare_docs_for_lda(corpus, fname, do):
+    try:
+        global SAMPLE_SIZE
+    except:
+        pass
+
     if do:
         docs_for_lda = {}
-        for article in corpus.iter():
-            docs_for_lda[article.id] = article.content
+        for article in corpus.iter_sampling(n=SAMPLE_SIZE):
+            docs_for_lda[article.id] = ' '.join(list(itertools.chain(*article.nouns_stop)))
 
         newsio.save(_object=docs_for_lda, _type='data', fname_object=fname)
 
@@ -80,11 +87,10 @@ def gridsearch(fname, do, **kwargs):
 
 if __name__ == '__main__':
     ## Parameters
-    CORPUS_START = '202101'
-    CORPUS_END = '202103'
+    SAMPLE_SIZE = 10000
 
-    DO_PREPARE_DOCS_FOR_LDA = True
-    DO_VECTORIZE = True
+    DO_PREPARE_DOCS_FOR_LDA = False
+    DO_VECTORIZE = False
     DO_GRIDSEARCH = True
 
     LDA_PARAMETERS = {'learning_method': 'online',
@@ -93,23 +99,23 @@ if __name__ == '__main__':
                       'evaluate_every': -1,
                       'n_jobs': -1,
                       }
-    GS_PARAMETERS = {'n_components': [10, 15, 20, 25, 30], #NUM_TOPICS
+    GS_PARAMETERS = {'n_components': [5, 10, 15, 20, 30, 50], #NUM_TOPICS
                      'learning_decay': [0.5, 0.7, 0.9],
                      'max_iter': [10, 100, 500],
                     }
 
 
     ## Filenames
-    fname_docs_for_lda = f'docs_{CORPUS_START}_{CORPUS_END}.pk'
-    fname_docs_vectorized = f'docs_vectorized_{CORPUS_START}_{CORPUS_END}.pk'
-    fname_gs_model = f'lda_gs_model_{CORPUS_START}_{CORPUS_END}.pk'
+    fname_docs_for_lda = f'docs_{SAMPLE_SIZE}.pk'
+    fname_docs_vectorized = f'docs_vectorized_{SAMPLE_SIZE}.pk'
+    fname_gs_model = f'lda_gs_model_{SAMPLE_SIZE}.pk'
 
     ## Data import
     print('============================================================')
     print('--------------------------------------------------')
     print('Load corpus')
 
-    corpus = NewsMonthlyCorpus(fdir_corpus=newspath.fdir_corpus_monthly, start=CORPUS_START, end=CORPUS_END)
+    corpus = NewsCorpus(fdir_corpus=newspath.fdir_corpus)
     DOCN = len(corpus)
     print(f'  | Corpus: {DOCN:,}')
 
@@ -147,8 +153,3 @@ if __name__ == '__main__':
     print(f'  | Parameters: {gs_model.best_params_}')
     print(f'  | Log likelihood score: {gs_model.best_score_:,.03f}')
     print(f'  | Perplexity: {lda_model_best.perplexity(docs_vectorized)}')
-
-    # print('--------------------------------------------------')
-    # print('Performance evaluation')
-
-    # 
