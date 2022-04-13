@@ -128,7 +128,11 @@ class NewsArticle:
         self.category = kwargs.get('category', '')
         self.content = kwargs.get('content', '')
 
+        self.preprocess = False
         self.sents = kwargs.get('sents', '')
+        self.normalized_sents = kwargs.get('normalized_sents', '')
+        self.nouns = kwargs.get('nouns', '')
+        self.nouns_stop = kwargs.get('nouns_stop', '')
 
     def extend_query(self, query_list):
         '''
@@ -461,7 +465,7 @@ class NewsMonthlyCorpus:
         yearmonth_end = datetime.strptime(self.end, '%Y%m').strftime('%Y-%m-%d')
         return pd.date_range(yearmonth_start, yearmonth_end, freq='MS').strftime('%Y%m').tolist()
 
-    def iter(self):
+    def iter_monthly(self):
         for yearmonth in tqdm(self.yearmonth_list):
             fdir_corpus_yearmonth = os.path.sep.join((self.fdir_corpus, yearmonth))
             corpus_yearmonth = []
@@ -471,6 +475,14 @@ class NewsMonthlyCorpus:
                     corpus_yearmonth.append(pk.load(f))
 
             yield corpus_yearmonth
+
+    def iter(self):
+        for yearmonth in tqdm(self.yearmonth_list):
+            fdir_corpus_yearmonth = os.path.sep.join((self.fdir_corpus, yearmonth))
+            for fname in os.listdir(fdir_corpus_yearmonth):
+                fpath = os.path.sep.join((fdir_corpus_yearmonth, fname))
+                with open(fpath, 'rb') as f:
+                    yield pk.load(f)
 
 
 class Word:

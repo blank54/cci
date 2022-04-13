@@ -17,16 +17,15 @@ newsio = NewsIO()
 newspath = NewsPath()
 
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichchletAllocation
+from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.model_selection import GridSearchCV
 
 
 def prepare_docs_for_lda(corpus, fname, do):
     if do:
         docs_for_lda = {}
-        for corpus_yearmonth in corpus.iter():
-            for article in corpus_yearmonth:
-                docs_for_lda[article.id] = article.nouns_stop
+        for article in corpus.iter():
+            docs_for_lda[article.id] = article.content
 
         newsio.save(_object=docs_for_lda, _type='data', fname_object=fname)
 
@@ -53,7 +52,7 @@ def sparcity(data):
 
 
 def init_lda_model(parameters):
-    lda_model = LatentDirichchletAllocation(learning_method=parameters.get('learning_method'),
+    lda_model = LatentDirichletAllocation(learning_method=parameters.get('learning_method'),
                                             random_state=parameters.get('random_state'),
                                             batch_size=parameters.get('batch_size'),
                                             evaluate_every=parameters.get('evaluate_every'),
@@ -78,17 +77,13 @@ def gridsearch(fname, do, **kwargs):
 
     return gs_model
 
-def show_best_model(gs_model):
-    
-
-
 
 if __name__ == '__main__':
     ## Parameters
-    CORPUS_START = '200501'
-    CORPUS_END = '202112'
+    CORPUS_START = '202101'
+    CORPUS_END = '202103'
 
-    DO_PREPARE_DOCS_FOR_LDA = False
+    DO_PREPARE_DOCS_FOR_LDA = True
     DO_VECTORIZE = True
     DO_GRIDSEARCH = True
 

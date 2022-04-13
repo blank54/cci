@@ -62,20 +62,11 @@ def remove_stopwords(sent, stoplist):
 def preprocess(corpus):
     _start = datetime.now()
     for article in corpus.iter():
-        try:
-            if article.preprocess == True:
-                continue
-            else:
-                pass
-        except AttributeError:
-            pass
-
         ## Preprocess
         normalized_text = normalize_text(text=article.content)
         sents = parse_sent(text=normalized_text)
         concatenated_sents = concatenate_short_sent(sents, MIN_SENT_LEN=MIN_SENT_LEN)
 
-        article.normalized_sents, article.nouns, article.nouns_stop = [], [], []
         for sent in concatenated_sents:
             trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
             if trash_score < MAX_TRASH_SCORE:
@@ -88,14 +79,13 @@ def preprocess(corpus):
                 continue
 
         ## Save corpus
-        if article.nouns_stop:
-            article.preprocess = True
-            fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, article.fname))
-            with open(fpath_article_preprocessed, 'wb') as f:
-                pk.dump(article, f)
+        article.preprocess = True
+        fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, article.fname))
+        with open(fpath_article_preprocessed, 'wb') as f:
+            pk.dump(article, f)
 
-            ## Save corpus monthly
-            newsio.save_corpus_monthly(article=article)
+        ## Save corpus monthly
+        newsio.save_corpus_monthly(article=article)
 
 
 if __name__ == '__main__':
@@ -107,14 +97,12 @@ if __name__ == '__main__':
     MIN_SENT_LEN = 3
     MAX_TRASH_SCORE = 2
 
-    DO_PREPROCESS = False
-
     ## Data import
     print('============================================================')
     print('--------------------------------------------------')
     print('Load corpus')
 
-    corpus = NewsCorpus(fdir_corpus=newspath.fdir_corpus)
+    corpus = NewsCorpus(fdir_corpus=newspath.fdir_articles)
     DOCN = len(corpus)
 
     print(f'  | Corpus: {DOCN:,}')
@@ -132,12 +120,5 @@ if __name__ == '__main__':
     print('============================================================')
     print('--------------------------------------------------')
     print('Preprocess text data')
-
-    if DO_PREPROCESS:
-        preprocess(corpus=corpus)
-    else:
-        pass
-
-    print('--------------------------------------------------')
-    print('Evaluation')
-
+    
+    preprocess(corpus=corpus)

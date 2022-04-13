@@ -16,6 +16,7 @@ class NewsPath:
 
     fdir_query = os.path.sep.join((root, 'query'))
     fdir_data = os.path.sep.join((root, 'data'))
+    fdir_articles = os.path.sep.join((root, 'articles'))
     fdir_corpus = os.path.sep.join((root, 'corpus'))
     fdir_corpus_monthly = os.path.sep.join((root, 'corpus_monthly'))
     fdir_model = os.path.sep.join((root, 'model'))

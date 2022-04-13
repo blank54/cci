@@ -26,18 +26,6 @@ def save_corpus(article):
     with open(fpath_corpus, 'wb') as g:
         pk.dump(article, g)
 
-def save_corpus_monthly(article):
-    yearmonth = datetime.strptime(article.date.datetime, '%Y.%m.%d').strftime('%Y%m')
-    fpath_corpus_monthly = os.path.sep.join((newspath.fdir_corpus_monthly, yearmonth, article.fname))
-
-    try:
-        os.makedirs(os.path.dirname(fpath_corpus_monthly), exist_ok=False)
-    except FileExistsError:
-        pass
-
-    with open(fpath_corpus_monthly, 'wb') as g:
-        pk.dump(article, g)
-
 def build_corpus(**kwargs):
     print('--------------------------------------------------')
     print('Find articles')
@@ -63,7 +51,7 @@ def build_corpus(**kwargs):
             article.date = deepcopy(NewsDate(date=article.date))
 
             save_corpus(article=article)
-            save_corpus_monthly(article=article)
+            newsio.save_corpus_monthly(article=article)
             cnt += 1
 
     print(f'  | Corpus: {cnt:,}')
