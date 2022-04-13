@@ -19,8 +19,7 @@ import matplotlib.pyplot as plt
 def assign_articles_monthly(corpus):
     data = defaultdict(list)
     for doc in corpus.iter():
-        yearmonth = NewsDate(date=doc.date).yearmonth
-        data[yearmonth].append(doc)
+        data[doc.date.yearmonth].append(doc)
 
     data = deepcopy(list(sorted(data.items(), key=lambda x:x[0], reverse=False)))
 

@@ -7,7 +7,7 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsDate
+from webcrawling import NewsDate
 from newsutil import NewsPath, NewsIO
 newspath = NewsPath()
 newsio = NewsIO()
@@ -17,7 +17,14 @@ import random
 import pickle as pk
 from tqdm import tqdm
 from copy import deepcopy
+from datetime import datetime
 random.seed(42)
+
+
+def save_corpus(article):
+    fpath_corpus = os.path.sep.join((newspath.fdir_corpus, article.fname))
+    with open(fpath_corpus, 'wb') as g:
+        pk.dump(article, g)
 
 def build_corpus(**kwargs):
     print('--------------------------------------------------')
@@ -37,28 +44,19 @@ def build_corpus(**kwargs):
     cnt = 0
     errors = []
     for fpath_article in tqdm(fpath_article_list):
-        try:
-            with open(fpath_article, 'rb') as f:
-                article = pk.load(f)
+        with open(fpath_article, 'rb') as f:
+            article = pk.load(f)
 
-                article.fname = deepcopy(os.path.basename(fpath_article))
-                article.date = deepcopy(NewsDate(date=article.date))
+            article.fname = deepcopy(os.path.basename(fpath_article))
+            article.date = deepcopy(NewsDate(date=article.date))
 
-                fpath_corpus = os.path.sep.join((newspath.fdir_corpus, article.fname))
-                with open(fpath_corpus, 'wb') as g:
-                    pk.dump(article, g)
-
-                month = datetime.strftime(article.date.datetime, '%Y%m').strptime('%m')
-                fpath_corpus_monthly = os.path.sep.join((newspath.fdir_corpus_monthly, month, article.fname))
-                with open(fpath_corpus_monthly, 'wb') as g:
-                    pk.dump(article, g)
-
+            save_corpus(article=article)
+            newsio.save_corpus_monthly(article=article)
             cnt += 1
-        except Exception as e:
-            errors.append((fname, e))
 
     print(f'  | Corpus: {cnt:,}')
     print(f'  | Errors: {len(errors):,}')
+    return errors
 
 
 if __name__ == '__main__':

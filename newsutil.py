@@ -8,6 +8,7 @@ import json
 import psutil
 import pickle as pk
 from tqdm import tqdm
+from datetime import datetime
 
 
 class NewsPath:
@@ -15,6 +16,7 @@ class NewsPath:
 
     fdir_query = os.path.sep.join((root, 'query'))
     fdir_data = os.path.sep.join((root, 'data'))
+    fdir_articles = os.path.sep.join((root, 'articles'))
     fdir_corpus = os.path.sep.join((root, 'corpus'))
     fdir_corpus_monthly = os.path.sep.join((root, 'corpus_monthly'))
     fdir_model = os.path.sep.join((root, 'model'))
@@ -52,6 +54,18 @@ class NewsIO(NewsPath):
             print(f'  | fname: {fname_object}')
 
         return _object
+
+    def save_corpus_monthly(self, article):
+        yearmonth = datetime.strptime(article.date.datetime, '%Y.%m.%d').strftime('%Y%m')
+        fpath_corpus_monthly = os.path.sep.join((self.fdir_corpus_monthly, yearmonth, article.fname))
+
+        try:
+            os.makedirs(os.path.dirname(fpath_corpus_monthly), exist_ok=False)
+        except FileExistsError:
+            pass
+
+        with open(fpath_corpus_monthly, 'wb') as g:
+            pk.dump(article, g)
 
     def read_thesaurus(self, fname_thesaurus):
         fpath_thesaurus = os.path.sep.join((self.fdir_thesaurus, fname_thesaurus))
