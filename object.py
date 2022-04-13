@@ -4,6 +4,7 @@
 # Configuration
 import os
 import time
+import random
 import itertools
 import numpy as np
 import pickle as pk
@@ -429,23 +430,25 @@ class NewsCorpus:
     def __len__(self):
         return len(os.listdir(self.fdir_corpus))
 
-    def iter(self, verbose=True, n=False, **kwargs):
-        if n:
-            for fname in tqdm(list(os.listdir(self.fdir_corpus))[:n]):
-                fpath = os.path.sep.join((self.fdir_corpus, fname))
+    def iter(self, **kwargs):
+        start = kwargs.get('start', 0)
+        end = kwargs.get('end', len(os.listdir(self.fdir_corpus)))
+
+        flist = os.listdir(self.fdir_corpus)[start:end]
+        for fname in tqdm(flist):
+            fpath = os.path.sep.join((self.fdir_corpus, fname))
+            try:
                 with open(fpath, 'rb') as f:
                     yield pk.load(f)
-        else:
-            start = kwargs.get('start', 0)
-            end = kwargs.get('end', len(os.listdir(self.fdir_corpus)))
+            except:
+                print(f'UnpicklingError: {fname}')
 
-            for fname in tqdm(os.listdir(self.fdir_corpus)[start:end]):
-                fpath = os.path.sep.join((self.fdir_corpus, fname))
-                try:
-                    with open(fpath, 'rb') as f:
-                        yield pk.load(f)
-                except:
-                    print(f'UnpicklingError: {fname}')
+    def iter_sampling(self, n, random_state=42):
+        flist = random.sample(os.listdir(self.fdir_corpus), k=n)
+        for fname in tqdm(flist):
+            fpath = os.path.sep.join((self.fdir_corpus, fname))
+            with open(fpath, 'rb') as f:
+                yield pk.load(f)
 
 
 class NewsMonthlyCorpus:
