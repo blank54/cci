@@ -101,12 +101,12 @@ def gridsearch(fname_gs_result, do, **kwargs):
 
 if __name__ == '__main__':
     ## Parameters
-    SAMPLE_SIZE = 10000
+    SAMPLE_SIZE = 100000
 
     DO_DATA_PREPARATION = True
     DO_GRIDSEARCH = True
 
-    GS_PARAMETERS = {'num_topics': [5, 10, 15, 30, 50], #NUM_TOPICS
+    GS_PARAMETERS = {'num_topics': [3, 5, 7, 10, 12, 15, 20, 25, 30, 50],
                      'iterations': [10, 100, 500],
                      'alpha': [0.1, 0.3, 0.5, 0.7],
                      'eta': [0.1, 0.3, 0.5, 0.7],
