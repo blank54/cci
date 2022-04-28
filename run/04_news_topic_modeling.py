@@ -1,5 +1,6 @@
 '''
 https://www.machinelearningplus.com/nlp/topic-modeling-python-sklearn-examples/
+https://coredottoday.github.io/2018/09/17/%EB%AA%A8%EB%8D%B8-%ED%8C%8C%EB%9D%BC%EB%AF%B8%ED%84%B0-%ED%8A%9C%EB%8B%9D/
 '''
 
 #!/usr/bin/env python
@@ -17,98 +18,103 @@ newsio = NewsIO()
 newspath = NewsPath()
 
 import itertools
+from tqdm import tqdm
 
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-from sklearn.model_selection import GridSearchCV
+import gensim.corpora as corpora
+from gensim.models.coherencemodel import CoherenceModel
+from gensim.models.ldamodel import LdaModel
 
 
-def prepare_docs_for_lda(corpus, fname, do):
+def data_preparation(corpus, fname):
     try:
-        global SAMPLE_SIZE
-    except:
-        pass
-
-    if do:
-        docs_for_lda = {}
+        lda_data = newsio.load(_type='data', fname_object=fname)
+        docs_dict, id2word, docs_bow = lda_data
+    except FileNotFoundError:
+        docs_dict = {}
         for article in corpus.iter_sampling(n=SAMPLE_SIZE):
-            docs_for_lda[article.id] = ' '.join(list(itertools.chain(*article.nouns_stop)))
+            docs_dict[article.id] = list(itertools.chain(*article.nouns_stop))
 
-        newsio.save(_object=docs_for_lda, _type='data', fname_object=fname)
+        id2word = corpora.Dictionary(docs_dict.values())
+        docs_bow = [id2word.doc2bow(text) for text in docs_dict.values()]
 
-    else:
-        docs_for_lda = newsio.load(_type='data', fname_object=fname)
+        lda_data = [docs_dict, id2word, docs_bow]
+        newsio.save(_object=lda_data, _type='data', fname_object=fname)
 
-    return docs_for_lda
+    return docs_dict, id2word, docs_bow
 
-def vectorize_docs(docs, fname, do):
-    if do:
-        vectorizer = CountVectorizer(analyzer='word', min_df=100)
-        docs_vectorized = vectorizer.fit_transform(docs.values())
-
-        newsio.save(_object=docs_vectorized, _type='data', fname_object=fname)
-
-    else:
-        docs_vectorized = newsio.load(_type='data', fname_object=fname)
-
-    return docs_vectorized
-
-def sparcity(data):
-    data_dense = data.todense()
-    return ((data_dense > 0).sum()/data_dense.size)*100
-
-
-def init_lda_model(parameters):
-    lda_model = LatentDirichletAllocation(learning_method=parameters.get('learning_method'),
-                                            random_state=parameters.get('random_state'),
-                                            batch_size=parameters.get('batch_size'),
-                                            evaluate_every=parameters.get('evaluate_every'),
-                                            n_jobs=parameters.get('n_jobs'),
-                                            )
+def develop_lda_model(docs_bow, id2word, num_topics, iterations, alpha, eta):
+    lda_model = LdaModel(corpus=docs_bow,
+                         id2word=id2word,
+                         num_topics=num_topics,
+                         iterations=iterations,
+                         alpha=alpha,
+                         eta=eta,)
 
     return lda_model
 
-def gridsearch(fname, do, **kwargs):
+def calculate_coherence(lda_model, docs_dict):
+    coherence_model = CoherenceModel(model=lda_model,
+                                     texts=docs_dict.values())
+
+    return coherence_model.get_coherence()
+
+def gridsearch(fname_gs_result, do, **kwargs):
     if do:
-        lda_model = kwargs.get('lda_model')
         parameters = kwargs.get('parameters')
-        docs_vectorized = kwargs.get('docs')
+        docs_dict, id2word, docs_bow = data_preparation(corpus=corpus, fname=fname_lda_data)
 
-        gs_model = GridSearchCV(lda_model, param_grid=parameters)
-        gs_model.fit(docs_vectorized)
+        num_topics_list = parameters.get('num_topics')
+        iterations_list = parameters.get('iterations')
+        alpha_list = parameters.get('alpha')
+        eta_list = parameters.get('eta')
 
-        newsio.save(_object=gs_model, _type='model', fname_object=fname)
+        gs_result = {}
+        candidates = itertools.product(*[num_topics_list, iterations_list, alpha_list, eta_list])
+        for candidate in tqdm(candidates):
+            print('\n--------------------------------------------------')
+            print(f'LDA modeling')
+            print(f'  | candidate: {candidate}')
+            num_topics, iterations, alpha, eta = candidate
+            fname_lda_model = f'lda/lda_{num_topics}_{iterations}_{alpha}_{eta}.pk'
+            fname_coherence_model = f'coherence/coherence_{num_topics}_{iterations}_{alpha}_{eta}.pk'
+
+            try:
+                lda_model = newsio.load(_type='model', fname_object=fname_lda_model)
+            except FileNotFoundError:
+                lda_model = develop_lda_model(docs_bow, id2word, num_topics, iterations, alpha, eta)
+                newsio.save(_object=lda_model, _type='model', fname_object=fname_lda_model)
+
+            coherence_score = calculate_coherence(lda_model, docs_dict)
+            gs_result[fname_lda_model] = coherence_score
+            print('--------------------------------------------------')
+            print(f'LDA result')
+            print(f'  | candidate: {candidate}')
+            print(f'  | coherence: {coherence_score:,.03f}')
+
+        newsio.save(_object=gs_result, _type='result', fname_object=fname_gs_result)
 
     else:
-        gs_model = newsio.load(_type='model', fname_object=fname)
+        gs_result = newsio.load(_type='result', fname_object=fname_gs_result)
 
-    return gs_model
+    return gs_result
 
 
 if __name__ == '__main__':
     ## Parameters
-    SAMPLE_SIZE = 10000
+    SAMPLE_SIZE = 100000
 
-    DO_PREPARE_DOCS_FOR_LDA = False
-    DO_VECTORIZE = False
+    DO_DATA_PREPARATION = True
     DO_GRIDSEARCH = True
 
-    LDA_PARAMETERS = {'learning_method': 'online',
-                      'random_state': 42,
-                      'batch_size': 128,
-                      'evaluate_every': -1,
-                      'n_jobs': -1,
-                      }
-    GS_PARAMETERS = {'n_components': [5, 10, 15, 20, 30, 50], #NUM_TOPICS
-                     'learning_decay': [0.5, 0.7, 0.9],
-                     'max_iter': [10, 100, 500],
+    GS_PARAMETERS = {'num_topics': [3, 5, 7, 10, 12, 15, 20, 25, 30, 50],
+                     'iterations': [10, 100, 500],
+                     'alpha': [0.1, 0.3, 0.5, 0.7],
+                     'eta': [0.1, 0.3, 0.5, 0.7],
                     }
 
-
     ## Filenames
-    fname_docs_for_lda = f'docs_{SAMPLE_SIZE}.pk'
-    fname_docs_vectorized = f'docs_vectorized_{SAMPLE_SIZE}.pk'
-    fname_gs_model = f'lda_gs_model_{SAMPLE_SIZE}.pk'
+    fname_lda_data = f'docs_{SAMPLE_SIZE}.pk'
+    fname_gs_result = f'lda_gs_{SAMPLE_SIZE}.json'
 
     ## Data import
     print('============================================================')
@@ -116,40 +122,12 @@ if __name__ == '__main__':
     print('Load corpus')
 
     corpus = NewsCorpus(fdir_corpus=newspath.fdir_corpus)
-    DOCN = len(corpus)
-    print(f'  | Corpus: {DOCN:,}')
-
-    print('--------------------------------------------------')
-    print('Docs for LDA')
-
-    docs_for_lda = prepare_docs_for_lda(corpus=corpus, fname=fname_docs_for_lda, do=DO_PREPARE_DOCS_FOR_LDA)
-    print(f'  | {len(docs_for_lda):,} articles')
-
-    print('--------------------------------------------------')
-    print('Vectorization')
-
-    docs_vectorized = vectorize_docs(docs=docs_for_lda, fname=fname_docs_vectorized, do=DO_VECTORIZE)
-    data_sparcity = sparcity(data=docs_vectorized)
-    print(f'  | Shape: {docs_vectorized.shape}')
-    print(f'  | Sparcity: {data_sparcity:,.03f}')
+    print(f'  | Corpus: {len(corpus):,}')
 
     ## Topic modeling
     print('============================================================')
-    print('--------------------------------------------------')
-    print('Init LDA model')
-
-    lda_model = init_lda_model(parameters=LDA_PARAMETERS)
-    print(f'  | {lda_model}')
-
-    print('--------------------------------------------------')
     print('Gridsearch')
 
-    gs_model = gridsearch(fname=fname_gs_model, do=DO_GRIDSEARCH, lda_model=lda_model, parameters=GS_PARAMETERS, docs=docs_vectorized)
+    gs_result = gridsearch(fname_gs_result=fname_gs_result, do=DO_GRIDSEARCH, parameters=GS_PARAMETERS)
 
-    print('--------------------------------------------------')
-    print('Best model')
-
-    lda_model_best = gs_model.best_estimator_
-    print(f'  | Parameters: {gs_model.best_params_}')
-    print(f'  | Log likelihood score: {gs_model.best_score_:,.03f}')
-    print(f'  | Perplexity: {lda_model_best.perplexity(docs_vectorized)}')
+    print(gs_result)

@@ -7,6 +7,7 @@ import random
 import pickle as pk
 import pandas as pd
 from tqdm import tqdm
+from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
 
@@ -14,6 +15,8 @@ import gensim.corpora as corpora
 from gensim.models.ldamodel import LdaModel
 from gensim.models import CoherenceModel
 import pyLDAvis.gensim
+
+import matplotlib.pyplot as plt
 
 
 class NewsArticle:
@@ -184,51 +187,51 @@ class Word:
         return word
 
 
-# class NewsTopicModel:
-#     def __init__(self, docs, num_topics):
-#         self.docs = docs
-#         self.id2word = corpora.Dictionary(self.docs.values())
+class LdaGridSearchResult:
+    def __init__(self, gs_result):
+        self.fname2coherence = gs_result
+        self.result = self.__get_result()
 
-#         self.model = ''
-#         self.coherence = ''
+    def __get_result(self):
+        result = defaultdict(list)
+        for fname, coherence in self.fname2coherence.items():
+            _, num_topics, iterations, alpha, eta = Path(fname).stem.split('_')
 
-#         self.num_topics = num_topics
-#         self.docs_for_lda = [self.id2word.doc2bow(text) for text in self.docs.values()]
+            result['fname'].append(fname)
+            result['num_topics'].append(num_topics)
+            result['iterations'].append(iterations)
+            result['alpha'].append(alpha)
+            result['eta'].append(eta)
+            result['coherence'].append(coherence)
 
-#         self.tag2topic = {}
-#         self.topic2tag = defaultdict(list)
+        return result
 
-#     def fit(self, **kwargs):
-#         parameters = kwargs.get('parameters', {})
-#         self.model = LdaModel(corpus=self.docs_for_lda,
-#                               id2word=self.id2word,
-#                               num_topics=self.num_topics,
-#                               iterations=parameters.get('iterations', 100),
-#                               update_every=parameters.get('update_every', 1),
-#                               chunksize=parameters.get('chunksize', 100),
-#                               passes=parameters.get('passes', 10),
-#                               alpha=parameters.get('alpha', 0.5),
-#                               eta=parameters.get('eta', 0.5),
-#                               )
+    def scatter_plot(self, x):
+        '''
+        Attributes
+        ----------
+        x : str
+            | The variable name (e.g., num_topics, iterations, alpha, eta)
+        '''
 
-#         self.__calculate_coherence()
+        plt.scatter(self.result[x], self.result['coherence'])
+        plt.show()
 
-#     def __calculate_coherence(self):
-#         coherence_model = CoherenceModel(model=self.model,
-#                                          texts=self.docs.values(),
-#                                          dictionary=self.id2word)
-#         self.coherence = coherence_model.get_coherence()
+    def box_plot(self, x):
+        '''
+        Attributes
+        ----------
+        x : str
+            | The variable name (e.g., num_topics, iterations, alpha, eta)
+        '''
 
-#     def assign(self):
-#         doc2topic = self.model[self.docs_for_lda]
+        _dict = defaultdict(list)
+        for x_value, coherence in zip(self.result[x], self.result['coherence']):
+            _dict[x_value].append(coherence)
 
-#         for idx, tag in enumerate(self.docs_for_lda):
-#             topic_id = sorted(doc2topic[idx], key=lambda x:x[1], reverse=True)[0][0]
-#             self.tag2topic[tag] = topic_id
-#             self.topic2tag[topic_id].append(tag)
-
-#     def visualize(self):
-#         pyLDAvis.gensim.prepare(self.model, self.docs_for_lda, self.id2word)
+        plt.boxplot(_dict.values())
+        plt.xticks(range(1, len(_dict.keys())+1), list(_dict.keys()))
+        plt.show()
 
 
 class NumericMeta:
@@ -254,3 +257,68 @@ class NumericMeta:
 
     def __str__(self):
         return self.info
+
+
+class NumericData():
+    def __init__(self, fdir, **kwargs):
+        self.fdir = fdir
+
+        self.data_list = self.__read_data()
+
+        self.num_vars = len(os.listdir(self.fdir))
+        self.num_attrs = len(self.data_list)
+
+        self.start = kwargs.get('start', 'InputRequired')
+        self.end = kwargs.get('end', 'InputRequired')
+
+    def __read_data(self):
+        data_list = []
+        for fname in os.listdir(self.fdir):
+            fpath = os.path.sep.join((self.fdir, fname))
+
+            _df = pd.read_excel(fpath, na_values='')
+            for _, row in _df.iterrows():
+                year = row['yearmonth'].year
+                month = row['yearmonth'].month
+                yearmonth = f'{year}{month:02}'
+
+                if yearmonth == 'nannan':
+                    print(row)
+
+                for attr in row.keys():
+                    if attr == 'yearmonth':
+                        continue
+                    else:
+                        data_list.append((yearmonth, attr, row[attr]))
+
+        return data_list
+
+    def __set_time_range(self, start, end):
+        '''
+        Attributes
+        ----------
+        start : str
+            | YYYYMM
+        end : str
+            |YYYYMM
+        '''
+
+        start_dt = datetime.strptime(start, '%Y%m')
+        end_dt = datetime.strptime(end, '%Y%m')
+        return pd.date_range(start_dt, end_dt, freq='MS').strftime('%Y%m').tolist()
+
+    def to_df(self, **kwargs):
+        start = kwargs.get('start', self.start)
+        end = kwargs.get('end', self.end)
+        time_range = self.__set_time_range(start, end)
+
+        _dict = defaultdict(list)
+        _dict['yearmonth'] = time_range
+        for yearmonth, attr, value in sorted(self.data_list, key=lambda x:x[0], reverse=False):
+            if yearmonth in time_range:
+                _dict[attr].append(value)
+            else:
+                continue
+
+        _df = pd.DataFrame(_dict)
+        return _df
