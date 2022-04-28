@@ -36,6 +36,7 @@ class NewsIO(NewsPath):
     def save(self, _object, _type, fname_object, verbose=True):
         fdir_object = os.path.sep.join((self.root, _type))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
+
         with open(fpath_object, 'wb') as f:
             pk.dump(_object, f)
 

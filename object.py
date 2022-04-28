@@ -184,53 +184,6 @@ class Word:
         return word
 
 
-# class NewsTopicModel:
-#     def __init__(self, docs, num_topics):
-#         self.docs = docs
-#         self.id2word = corpora.Dictionary(self.docs.values())
-
-#         self.model = ''
-#         self.coherence = ''
-
-#         self.num_topics = num_topics
-#         self.docs_for_lda = [self.id2word.doc2bow(text) for text in self.docs.values()]
-
-#         self.tag2topic = {}
-#         self.topic2tag = defaultdict(list)
-
-#     def fit(self, **kwargs):
-#         parameters = kwargs.get('parameters', {})
-#         self.model = LdaModel(corpus=self.docs_for_lda,
-#                               id2word=self.id2word,
-#                               num_topics=self.num_topics,
-#                               iterations=parameters.get('iterations', 100),
-#                               update_every=parameters.get('update_every', 1),
-#                               chunksize=parameters.get('chunksize', 100),
-#                               passes=parameters.get('passes', 10),
-#                               alpha=parameters.get('alpha', 0.5),
-#                               eta=parameters.get('eta', 0.5),
-#                               )
-
-#         self.__calculate_coherence()
-
-#     def __calculate_coherence(self):
-#         coherence_model = CoherenceModel(model=self.model,
-#                                          texts=self.docs.values(),
-#                                          dictionary=self.id2word)
-#         self.coherence = coherence_model.get_coherence()
-
-#     def assign(self):
-#         doc2topic = self.model[self.docs_for_lda]
-
-#         for idx, tag in enumerate(self.docs_for_lda):
-#             topic_id = sorted(doc2topic[idx], key=lambda x:x[1], reverse=True)[0][0]
-#             self.tag2topic[tag] = topic_id
-#             self.topic2tag[topic_id].append(tag)
-
-#     def visualize(self):
-#         pyLDAvis.gensim.prepare(self.model, self.docs_for_lda, self.id2word)
-
-
 class NumericMeta:
     def __init__(self, fname, fdir):
         self.fname = fname
@@ -254,3 +207,68 @@ class NumericMeta:
 
     def __str__(self):
         return self.info
+
+
+class NumericData():
+    def __init__(self, fdir, **kwargs):
+        self.fdir = fdir
+
+        self.data_list = self.__read_data()
+
+        self.num_vars = len(os.listdir(self.fdir))
+        self.num_attrs = len(self.data_list)
+
+        self.start = kwargs.get('start', 'InputRequired')
+        self.end = kwargs.get('end', 'InputRequired')
+
+    def __read_data(self):
+        data_list = []
+        for fname in os.listdir(self.fdir):
+            fpath = os.path.sep.join((self.fdir, fname))
+
+            _df = pd.read_excel(fpath, na_values='')
+            for _, row in _df.iterrows():
+                year = row['yearmonth'].year
+                month = row['yearmonth'].month
+                yearmonth = f'{year}{month:02}'
+
+                if yearmonth == 'nannan':
+                    print(row)
+
+                for attr in row.keys():
+                    if attr == 'yearmonth':
+                        continue
+                    else:
+                        data_list.append((yearmonth, attr, row[attr]))
+
+        return data_list
+
+    def __set_time_range(self, start, end):
+        '''
+        Attributes
+        ----------
+        start : str
+            | YYYYMM
+        end : str
+            |YYYYMM
+        '''
+
+        start_dt = datetime.strptime(start, '%Y%m')
+        end_dt = datetime.strptime(end, '%Y%m')
+        return pd.date_range(start_dt, end_dt, freq='MS').strftime('%Y%m').tolist()
+
+    def to_df(self, **kwargs):
+        start = kwargs.get('start', self.start)
+        end = kwargs.get('end', self.end)
+        time_range = self.__set_time_range(start, end)
+
+        _dict = defaultdict(list)
+        _dict['yearmonth'] = time_range
+        for yearmonth, attr, value in sorted(self.data_list, key=lambda x:x[0], reverse=False):
+            if yearmonth in time_range:
+                _dict[attr].append(value)
+            else:
+                continue
+
+        _df = pd.DataFrame(_dict)
+        return _df
