@@ -7,6 +7,7 @@ import random
 import pickle as pk
 import pandas as pd
 from tqdm import tqdm
+from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
 
@@ -14,6 +15,8 @@ import gensim.corpora as corpora
 from gensim.models.ldamodel import LdaModel
 from gensim.models import CoherenceModel
 import pyLDAvis.gensim
+
+import matplotlib.pyplot as plt
 
 
 class NewsArticle:
@@ -182,6 +185,53 @@ class Word:
 
     def __str__(self):
         return word
+
+
+class LdaGridSearchResult:
+    def __init__(self, gs_result):
+        self.fname2coherence = gs_result
+        self.result = self.__get_result()
+
+    def __get_result(self):
+        result = defaultdict(list)
+        for fname, coherence in self.fname2coherence.items():
+            _, num_topics, iterations, alpha, eta = Path(fname).stem.split('_')
+
+            result['fname'].append(fname)
+            result['num_topics'].append(num_topics)
+            result['iterations'].append(iterations)
+            result['alpha'].append(alpha)
+            result['eta'].append(eta)
+            result['coherence'].append(coherence)
+
+        return result
+
+    def scatter_plot(self, x):
+        '''
+        Attributes
+        ----------
+        x : str
+            | The variable name (e.g., num_topics, iterations, alpha, eta)
+        '''
+
+        plt.scatter(self.result[x], self.result['coherence'])
+        plt.show()
+
+    def box_plot(self, x):
+        '''
+        Attributes
+        ----------
+        x : str
+            | The variable name (e.g., num_topics, iterations, alpha, eta)
+        '''
+
+        _dict = defaultdict(list)
+        for x_value, coherence in zip(self.result[x], self.result['coherence']):
+            _dict[x_value].append(coherence)
+
+        plt.boxplot(_dict.values())
+        plt.xticks(range(1, len(_dict.keys())+1), list(_dict.keys()))
+        plt.show()
 
 
 class NumericMeta:
