@@ -17,10 +17,10 @@ newsio = NewsIO()
 newspath = NewsPath()
 
 import itertools
+from tqdm import tqdm
 
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
-from sklearn.model_selection import GridSearchCV
 
 
 def prepare_docs_for_lda(corpus, fname, do):
@@ -57,32 +57,64 @@ def sparcity(data):
     data_dense = data.todense()
     return ((data_dense > 0).sum()/data_dense.size)*100
 
+def develop_lda_model(docs, num_topics, learning_decay, max_iter, batch_size):
+    lda_model = LatentDirichletAllocation(n_components=num_topics,
+                                          learning_decay=learning_decay,
+                                          max_iter=max_iter,
+                                          batch_size=batch_size,
+                                          learning_method='online',
+                                          evaluate_every=0,
+                                          n_jobs=4,
+                                          random_state=42,
+                                          verbose=1
+                                          )
 
-def init_lda_model(parameters):
-    lda_model = LatentDirichletAllocation(learning_method=parameters.get('learning_method'),
-                                            random_state=parameters.get('random_state'),
-                                            batch_size=parameters.get('batch_size'),
-                                            evaluate_every=parameters.get('evaluate_every'),
-                                            n_jobs=parameters.get('n_jobs'),
-                                            )
+    lda_model.fit_transform(docs)
+
+    
 
     return lda_model
 
-def gridsearch(fname, do, **kwargs):
+def gridsearch(fname_gs_result, do, **kwargs):
     if do:
-        lda_model = kwargs.get('lda_model')
+        docs = kwargs.get('docs')
         parameters = kwargs.get('parameters')
-        docs_vectorized = kwargs.get('docs')
 
-        gs_model = GridSearchCV(lda_model, param_grid=parameters)
-        gs_model.fit(docs_vectorized)
+        num_topics_list = parameters.get('num_topics')
+        learning_decay_list = parameters.get('learning_decay')
+        max_iter_list = parameters.get('max_iter')
+        batch_size_list = parameters.get('batch_size')
 
-        newsio.save(_object=gs_model, _type='model', fname_object=fname)
+        gs_result = {}
+        candidates = itertools.product(*[num_topics_list, learning_decay_list, max_iter_list, batch_size_list])
+        for candidate in tqdm(candidates):
+            print('--------------------------------------------------')
+            print(f'LDA modeling')
+            print(f'  | candidate: {candidate}')
+            num_topics, learning_decay, max_iter, batch_size = candidate
+            fname_lda_model = f'lda/lda_{num_topics}_{learning_decay}_{max_iter}_{batch_size}.pk'
+
+            try:
+                lda_model = newsio.load(_type='model', fname_object=fname_lda_model)
+            except FileNotFoundError:
+                lda_model = develop_lda_model(docs, num_topics, learning_decay, max_iter, batch_size)
+                newsio.save(_object=lda_model, _type='model', fname_object=fname_lda_model)
+
+            perplexity = lda_model.perplexity(docs)
+            loglikelihood = lda_model.score(docs)
+            gs_result[fname_lda_model] = (perplexity, loglikelihood)
+            print('--------------------------------------------------')
+            print(f'LDA result')
+            print(f'  | candidate: {candidate}')
+            print(f'  | perplexity: {perplexity:,.03f}')
+            print(f'  | loglikelihood: {loglikelihood:,.03f}')
+
+        newsio.save(_object=gs_result, _type='result', fname_object=fname_gs_result)
 
     else:
-        gs_model = newsio.load(_type='model', fname_object=fname)
+        gs_result = newsio.load(_type='result', fname_object=fname_gs_result)
 
-    return gs_model
+    return gs_result
 
 
 if __name__ == '__main__':
@@ -93,22 +125,17 @@ if __name__ == '__main__':
     DO_VECTORIZE = False
     DO_GRIDSEARCH = True
 
-    LDA_PARAMETERS = {'learning_method': 'online',
-                      'random_state': 42,
-                      'batch_size': 128,
-                      'evaluate_every': -1,
-                      'n_jobs': -1,
-                      }
-    GS_PARAMETERS = {'n_components': [5, 10, 15, 20, 30, 50], #NUM_TOPICS
-                     'learning_decay': [0.5, 0.7, 0.9],
+    GS_PARAMETERS = {'num_topics': [5, 10, 15, 30, 50], #NUM_TOPICS
+                     'learning_decay': [5e-1, 7e-1, 9e-1],
                      'max_iter': [10, 100, 500],
+                     'batch_size': [64, 128, 256],
                     }
 
 
     ## Filenames
     fname_docs_for_lda = f'docs_{SAMPLE_SIZE}.pk'
     fname_docs_vectorized = f'docs_vectorized_{SAMPLE_SIZE}.pk'
-    fname_gs_model = f'lda_gs_model_{SAMPLE_SIZE}.pk'
+    fname_gs_result = f'lda_gs_{SAMPLE_SIZE}.json'
 
     ## Data import
     print('============================================================')
@@ -135,21 +162,8 @@ if __name__ == '__main__':
 
     ## Topic modeling
     print('============================================================')
-    print('--------------------------------------------------')
-    print('Init LDA model')
-
-    lda_model = init_lda_model(parameters=LDA_PARAMETERS)
-    print(f'  | {lda_model}')
-
-    print('--------------------------------------------------')
     print('Gridsearch')
 
-    gs_model = gridsearch(fname=fname_gs_model, do=DO_GRIDSEARCH, lda_model=lda_model, parameters=GS_PARAMETERS, docs=docs_vectorized)
+    gs_result = gridsearch(fname_gs_result=fname_gs_result, do=DO_GRIDSEARCH, docs=docs_vectorized, parameters=GS_PARAMETERS)
 
-    print('--------------------------------------------------')
-    print('Best model')
-
-    lda_model_best = gs_model.best_estimator_
-    print(f'  | Parameters: {gs_model.best_params_}')
-    print(f'  | Log likelihood score: {gs_model.best_score_:,.03f}')
-    print(f'  | Perplexity: {lda_model_best.perplexity(docs_vectorized)}')
+    print(gs_result)
