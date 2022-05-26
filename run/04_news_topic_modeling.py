@@ -17,7 +17,9 @@ from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()
 
+import json
 import itertools
+import numpy as np
 from tqdm import tqdm
 
 import gensim.corpora as corpora
@@ -25,10 +27,16 @@ from gensim.models.coherencemodel import CoherenceModel
 from gensim.models.ldamodel import LdaModel
 
 
-def data_preparation(corpus, fname):
+def data_preparation(corpus, SAMPLE_SIZE):
+    ## Filenames
+    fname_docs_dict = f'lda/docs_dict_{SAMPLE_SIZE}.json'
+    fname_id2word = f'lda/id2word_{SAMPLE_SIZE}.json'
+    fname_docs_bow = f'lda/docs_bow_{SAMPLE_SIZE}.json'
+
     try:
-        lda_data = newsio.load(_type='data', fname_object=fname)
-        docs_dict, id2word, docs_bow = lda_data
+        docs_dict = newsio.load(_type='data', fname_object=fname_docs_dict)
+        id2word = newsio.load(_type='data', fname_object=fname_id2word)
+        docs_bow = newsio.load(_type='data', fname_object=fname_docs_bow)
     except FileNotFoundError:
         docs_dict = {}
         for article in corpus.iter_sampling(n=SAMPLE_SIZE):
@@ -37,8 +45,9 @@ def data_preparation(corpus, fname):
         id2word = corpora.Dictionary(docs_dict.values())
         docs_bow = [id2word.doc2bow(text) for text in docs_dict.values()]
 
-        lda_data = [docs_dict, id2word, docs_bow]
-        newsio.save(_object=lda_data, _type='data', fname_object=fname)
+        docs_dict = newsio.save(_object=docs_dict, _type='data', fname_object=fname_docs_dict)
+        id2word = newsio.save(_object=id2word, _type='data', fname_object=fname_id2word)
+        docs_bow = newsio.save(_object=docs_bow, _type='data', fname_object=fname_docs_bow)
 
     return docs_dict, id2word, docs_bow
 
@@ -56,13 +65,19 @@ def calculate_coherence(lda_model, docs_dict):
     coherence_model = CoherenceModel(model=lda_model,
                                      texts=docs_dict.values())
 
-    return coherence_model.get_coherence()
+    coherence_score = coherence_model.get_coherence()
+    if np.isnan(coherence_score):
+        return 0
+    else:
+        return coherence_score
 
 def gridsearch(fname_gs_result, do, **kwargs):
     if do:
-        parameters = kwargs.get('parameters')
-        docs_dict, id2word, docs_bow = data_preparation(corpus=corpus, fname=fname_lda_data)
+        docs_dict = kwargs.get('docs_dict')
+        id2word = kwargs.get('id2word')
+        docs_bow = kwargs.get('docs_bow')
 
+        parameters = kwargs.get('parameters')
         num_topics_list = parameters.get('num_topics')
         iterations_list = parameters.get('iterations')
         alpha_list = parameters.get('alpha')
@@ -75,8 +90,8 @@ def gridsearch(fname_gs_result, do, **kwargs):
             print(f'LDA modeling')
             print(f'  | candidate: {candidate}')
             num_topics, iterations, alpha, eta = candidate
-            fname_lda_model = f'lda/lda_{num_topics}_{iterations}_{alpha}_{eta}.pk'
-            fname_coherence_model = f'coherence/coherence_{num_topics}_{iterations}_{alpha}_{eta}.pk'
+            fname_lda_model = f'lda/lda_{len(docs_dict)}_{num_topics}_{iterations}_{alpha}_{eta}.pk'
+            fname_coherence = f'lda/coherence_{len(docs_dict)}_{num_topics}_{iterations}_{alpha}_{eta}.pk'
 
             try:
                 lda_model = newsio.load(_type='model', fname_object=fname_lda_model)
@@ -84,8 +99,13 @@ def gridsearch(fname_gs_result, do, **kwargs):
                 lda_model = develop_lda_model(docs_bow, id2word, num_topics, iterations, alpha, eta)
                 newsio.save(_object=lda_model, _type='model', fname_object=fname_lda_model)
 
-            coherence_score = calculate_coherence(lda_model, docs_dict)
+            try:
+                coherence_score = newsio.load(_type='model', fname_object=fname_coherence)
+            except FileNotFoundError:
+                coherence_score = calculate_coherence(lda_model, docs_dict)
+                newsio.save(_object=coherence_score, _type='model', fname_object=fname_coherence)
             gs_result[fname_lda_model] = coherence_score
+            
             print('--------------------------------------------------')
             print(f'LDA result')
             print(f'  | candidate: {candidate}')
@@ -100,21 +120,19 @@ def gridsearch(fname_gs_result, do, **kwargs):
 
 
 if __name__ == '__main__':
+    ## Filenames
+
     ## Parameters
     SAMPLE_SIZE = 100000
 
     DO_DATA_PREPARATION = True
     DO_GRIDSEARCH = True
 
-    GS_PARAMETERS = {'num_topics': [3, 5, 7, 10, 12, 15, 20, 25, 30, 50],
-                     'iterations': [10, 100, 500],
-                     'alpha': [0.1, 0.3, 0.5, 0.7],
-                     'eta': [0.1, 0.3, 0.5, 0.7],
+    GS_PARAMETERS = {'num_topics': list(range(3, 51, 1)),
+                     'iterations': [10, 50, 100, 500],
+                     'alpha': [0.01, 0.02, 0.05, 0.1],
+                     'eta': [0.01, 0.02, 0.05, 0.1],
                     }
-
-    ## Filenames
-    fname_lda_data = f'docs_{SAMPLE_SIZE}.pk'
-    fname_gs_result = f'lda_gs_{SAMPLE_SIZE}.json'
 
     ## Data import
     print('============================================================')
@@ -122,12 +140,21 @@ if __name__ == '__main__':
     print('Load corpus')
 
     corpus = NewsCorpus(fdir_corpus=newspath.fdir_corpus)
-    print(f'  | Corpus: {len(corpus):,}')
+    docs_dict, id2word, docs_bow = data_preparation(corpus=corpus, SAMPLE_SIZE=SAMPLE_SIZE)
+    print(f'  | Corpus     : {len(corpus):,}')
+    print(f'  | Sample size: {SAMPLE_SIZE:,}')
+
+    ## Filenames
+    fname_gs_result = f'lda_gs_{SAMPLE_SIZE}.json'
 
     ## Topic modeling
     print('============================================================')
     print('Gridsearch')
 
-    gs_result = gridsearch(fname_gs_result=fname_gs_result, do=DO_GRIDSEARCH, parameters=GS_PARAMETERS)
-
+    gs_result = gridsearch(fname_gs_result=fname_gs_result,
+                           docs_dict=docs_dict,
+                           id2word=id2word,
+                           docs_bow=docs_bow,
+                           do=DO_GRIDSEARCH,
+                           parameters=GS_PARAMETERS)
     print(gs_result)

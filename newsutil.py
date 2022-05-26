@@ -37,6 +37,7 @@ class NewsIO(NewsPath):
         fdir_object = os.path.sep.join((self.root, _type))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
 
+        os.makedirs(fdir_object, exist_ok=True)
         with open(fpath_object, 'wb') as f:
             pk.dump(_object, f)
 
