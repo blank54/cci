@@ -4,6 +4,7 @@
 # Configuration
 import os
 import random
+import numpy as np
 import pickle as pk
 import pandas as pd
 from tqdm import tqdm
@@ -188,21 +189,29 @@ class Word:
 
 
 class LdaGridSearchResult:
-    def __init__(self, gs_result):
+    def __init__(self, gs_result, ignore_zero=True):
         self.fname2coherence = gs_result
+        self.ignore_zero = ignore_zero
         self.result = self.__get_result()
 
     def __get_result(self):
         result = defaultdict(list)
         for fname, coherence in self.fname2coherence.items():
-            _, num_topics, iterations, alpha, eta = Path(fname).stem.split('_')
+            if np.isnan(coherence):
+                if self.ignore_zero:
+                    continue
+                else:
+                    result['coherence'].append(0)
+                    pass
+            else:
+                result['coherence'].append(coherence)
 
+            _, doc_cnt, num_topics, iterations, alpha, eta = Path(fname).stem.split('_')
             result['fname'].append(fname)
             result['num_topics'].append(num_topics)
             result['iterations'].append(iterations)
             result['alpha'].append(alpha)
             result['eta'].append(eta)
-            result['coherence'].append(coherence)
 
         return result
 
@@ -230,7 +239,7 @@ class LdaGridSearchResult:
             _dict[x_value].append(coherence)
 
         plt.boxplot(_dict.values())
-        plt.xticks(range(1, len(_dict.keys())+1), list(_dict.keys()))
+        plt.xticks(range(1, len(_dict.keys())+1), _dict.keys())
         plt.show()
 
 
@@ -264,9 +273,10 @@ class NumericData():
         self.fdir = fdir
 
         self.data_list = self.__read_data()
+        self.attrs = list(set([attr for _, attr, _ in self.data_list]))
 
         self.num_vars = len(os.listdir(self.fdir))
-        self.num_attrs = len(self.data_list)
+        self.num_attrs = len(self.attrs)
 
         self.start = kwargs.get('start', 'InputRequired')
         self.end = kwargs.get('end', 'InputRequired')

@@ -83,9 +83,9 @@ if __name__ == '__main__':
     fdir_numeric_data = os.path.sep.join((newspath.fdir_data, 'numeric'))
     numeric_data = NumericData(fdir=fdir_numeric_data)
     numeric_df = numeric_data.to_df(start='200501', end='201912')
-    print('  | Num of variables : {:,}'.format(numeric_data.num_vars))
-    print('  | Num of attributes: {:,}'.format(numeric_data.num_attrs))
-    print('  | Shape of dataset: {}'.format(numeric_df.shape))
+    print('  | Num of variables         : {:,}'.format(numeric_data.num_vars))
+    print('  | Num of attributes (total): {:,}'.format(numeric_data.num_attrs))
+    print('  | Shape of dataset         : {}'.format(numeric_df.shape))
 
     print('--------------------------------------------------')
     print(numeric_df.head())

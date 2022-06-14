@@ -21,6 +21,7 @@ class NewsPath:
     fdir_corpus_monthly = os.path.sep.join((root, 'corpus_monthly'))
     fdir_model = os.path.sep.join((root, 'model'))
     fdir_thesaurus = os.path.sep.join((root, 'thesaurus'))
+    fdir_result = os.path.sep.join((root, 'result'))
 
     fdir_url_list = os.path.sep.join((fdir_data, 'url_list'))
     fdir_article = os.path.sep.join((fdir_data, 'article'))
@@ -37,6 +38,7 @@ class NewsIO(NewsPath):
         fdir_object = os.path.sep.join((self.root, _type))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
 
+        os.makedirs(fdir_object, exist_ok=True)
         with open(fpath_object, 'wb') as f:
             pk.dump(_object, f)
 

@@ -7,17 +7,17 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from newscorpus import NewsCorpus
+from object import NewsCorpus
 from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()
 
 import re
 import pickle as pk
-from datetime import datetime
 from tqdm import tqdm
 from pathlib import Path
 from copy import deepcopy
+from datetime import datetime
 from collections import defaultdict
 
 from konlpy.tag import Komoran
@@ -70,11 +70,11 @@ def preprocess(corpus):
         for sent in concatenated_sents:
             trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
             if trash_score < MAX_TRASH_SCORE:
-                nouns = komoran.nouns(sent)
+                morphs = komoran.nouns(sent)
 
                 article.normalized_sents.append(sent)
-                article.nouns.append(nouns)
-                article.nouns_stop.append(remove_stopwords(sent=nouns, stoplist=stoplist))
+                article.nouns.append(morphs)
+                article.nouns_stop.append(remove_stopwords(sent=morphs, stoplist=stoplist))
             else:
                 continue
 
@@ -90,8 +90,8 @@ def preprocess(corpus):
 
 if __name__ == '__main__':
     ## Filenames
-    fname_trash_words = 'trashlist.txt'
-    fname_stoplist = 'stoplist.txt'
+    fname_trash_words = 'trashlist_20220614.txt'
+    fname_stoplist = 'stoplist_20220614.txt'
 
     ## Parameters
     MIN_SENT_LEN = 3
