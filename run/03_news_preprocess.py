@@ -14,10 +14,10 @@ newspath = NewsPath()
 
 import re
 import pickle as pk
-from datetime import datetime
 from tqdm import tqdm
 from pathlib import Path
 from copy import deepcopy
+from datetime import datetime
 from collections import defaultdict
 
 from konlpy.tag import Komoran
@@ -56,6 +56,9 @@ def concatenate_short_sent(sents, MIN_SENT_LEN):
     
     return output_sents
 
+def pos_tagging(sent):
+
+
 def remove_stopwords(sent, stoplist):
     return [w for w in sent if w not in stoplist]
 
@@ -70,11 +73,11 @@ def preprocess(corpus):
         for sent in concatenated_sents:
             trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
             if trash_score < MAX_TRASH_SCORE:
-                nouns = komoran.nouns(sent)
+                morphs = komoran.get_morphes_by_tags(sent, tag_list=['NNG', 'NNB', 'NP', 'NR', 'VA', 'VCN', 'VCP', 'VV', 'VX', 'NF', 'NV'])
 
                 article.normalized_sents.append(sent)
-                article.nouns.append(nouns)
-                article.nouns_stop.append(remove_stopwords(sent=nouns, stoplist=stoplist))
+                article.nouns.append(morphs)
+                article.nouns_stop.append(remove_stopwords(sent=morphs, stoplist=stoplist))
             else:
                 continue
 
@@ -90,8 +93,8 @@ def preprocess(corpus):
 
 if __name__ == '__main__':
     ## Filenames
-    fname_trash_words = 'trashlist.txt'
-    fname_stoplist = 'stoplist.txt'
+    fname_trash_words = 'trashlist_20220614.txt'
+    fname_stoplist = 'stoplist_20220614.txt'
 
     ## Parameters
     MIN_SENT_LEN = 3
