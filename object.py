@@ -273,9 +273,10 @@ class NumericData():
         self.fdir = fdir
 
         self.data_list = self.__read_data()
+        self.attrs = list(set([attr for _, attr, _ in self.data_list]))
 
         self.num_vars = len(os.listdir(self.fdir))
-        self.num_attrs = len(self.data_list)
+        self.num_attrs = len(self.attrs)
 
         self.start = kwargs.get('start', 'InputRequired')
         self.end = kwargs.get('end', 'InputRequired')
