@@ -7,7 +7,7 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from newscorpus import NewsCorpus
+from object import NewsCorpus
 from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()
@@ -56,9 +56,6 @@ def concatenate_short_sent(sents, MIN_SENT_LEN):
     
     return output_sents
 
-def pos_tagging(sent):
-
-
 def remove_stopwords(sent, stoplist):
     return [w for w in sent if w not in stoplist]
 
@@ -73,7 +70,7 @@ def preprocess(corpus):
         for sent in concatenated_sents:
             trash_score = sum([1 if word in sent else 0 for word in trash_word_list])
             if trash_score < MAX_TRASH_SCORE:
-                morphs = komoran.get_morphes_by_tags(sent, tag_list=['NNG', 'NNB', 'NP', 'NR', 'VA', 'VCN', 'VCP', 'VV', 'VX', 'NF', 'NV'])
+                morphs = komoran.nouns(sent)
 
                 article.normalized_sents.append(sent)
                 article.nouns.append(morphs)
