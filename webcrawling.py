@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
-from object import NewsArticle, NewsDate
+from news import NewsDate
 
 import time
 import itertools
@@ -241,7 +241,12 @@ class NaverNewsArticleParser(NewsCrawler):
         except IndexError:
             category = None
 
-        article = NewsArticle(url=url, id=self.url2id(url), title=title, date=date, category=category, content=content)
+        article = {'url': url,
+                   'id': self.url2id(url),
+                   'title': title,
+                   'date': date,
+                   'category': category,
+                   'content': content}
         return article
 
     def url2id(self, url):

@@ -8,7 +8,7 @@ rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.
 sys.path.append(rootpath)
 
 from webcrawling import *
-from newsutil import NewsPath, NewsFunc
+from news import NewsPath, NewsFunc
 query_parser = NewsQueryParser()
 list_scraper = NaverNewsListScraper()
 article_parser = NaverNewsArticleParser()
@@ -16,6 +16,7 @@ news_status = NewsStatus()
 newspath = NewsPath()
 newsfunc = NewsFunc()
 
+import json
 import itertools
 import pickle as pk
 from tqdm import tqdm
@@ -62,11 +63,11 @@ def load_url_list(fname_url_list):
     return url_list
 
 def save_article(article, fpath_article):
-    with open(fpath_article, 'wb') as f:
+    with open(fpath_article, 'w', encoding='utf-8') as f:
         pk.dump(article, f)
 
 def load_article(fpath_article):
-    with open(fpath_article, 'rb') as f:
+    with open(fpath_article, 'r', encoding='utf-8') as f:
         article = pk.load(f)
     return article
 
@@ -97,7 +98,7 @@ def parse_article(verbose_error):
             for url in url_list:
                 pbar.update(1)
 
-                fname_article = 'a-{}.pk'.format(article_parser.url2id(url))
+                fname_article = 'a-{}.json'.format(article_parser.url2id(url))
                 fpath_article = os.path.join(newspath.fdir_article, fname_article)
                 if not os.path.isfile(fpath_article):
                     try:
