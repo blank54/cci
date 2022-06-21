@@ -7,12 +7,12 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsCorpus
-from newsutil import NewsIO, NewsPath
+from news import NewsCorpus, NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()
 
 import re
+import json
 import pickle as pk
 from tqdm import tqdm
 from pathlib import Path
@@ -60,10 +60,9 @@ def remove_stopwords(sent, stoplist):
     return [w for w in sent if w not in stoplist]
 
 def preprocess(corpus):
-    _start = datetime.now()
     for article in corpus.iter():
         ## Preprocess
-        normalized_text = normalize_text(text=article.content)
+        normalized_text = normalize_text(text=article['content'])
         sents = parse_sent(text=normalized_text)
         concatenated_sents = concatenate_short_sent(sents, MIN_SENT_LEN=MIN_SENT_LEN)
 
@@ -72,20 +71,15 @@ def preprocess(corpus):
             if trash_score < MAX_TRASH_SCORE:
                 morphs = komoran.nouns(sent)
 
-                article.normalized_sents.append(sent)
-                article.nouns.append(morphs)
-                article.nouns_stop.append(remove_stopwords(sent=morphs, stoplist=stoplist))
+                article['normalized_sents'] = sent
+                article['nouns'] = morphs
+                article['nouns_stop'] = remove_stopwords(sent=morphs, stoplist=stoplist)
             else:
                 continue
 
         ## Save corpus
-        article.preprocess = True
-        fpath_article_preprocessed = os.path.sep.join((newspath.fdir_corpus, article.fname))
-        with open(fpath_article_preprocessed, 'wb') as f:
-            pk.dump(article, f)
-
-        ## Save corpus monthly
-        newsio.save_corpus_monthly(article=article)
+        with open(article['fpath_article_corpus'], 'w', encoding='utf-8') as f:
+            json.dump(article, f)
 
 
 if __name__ == '__main__':
@@ -102,7 +96,7 @@ if __name__ == '__main__':
     print('--------------------------------------------------')
     print('Load corpus')
 
-    corpus = NewsCorpus(fdir_corpus=newspath.fdir_articles)
+    corpus = NewsCorpus(start='200501', end='201912')
     DOCN = len(corpus)
 
     print(f'  | Corpus: {DOCN:,}')

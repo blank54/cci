@@ -83,8 +83,8 @@ if __name__ == '__main__':
     fname_doc_counter = 'doc_counter.pk'
 
     ## Parameters
-    do_build_counter = False
-    do_build_tfidf = False
+    do_build_counter = True
+    do_build_tfidf = True
 
     ## Data import
     print('============================================================')

@@ -3,7 +3,11 @@
 
 # Configuration
 import os
+import sys
 import random
+import json
+import psutil
+from glob import glob
 import numpy as np
 import pickle as pk
 import pandas as pd
@@ -20,64 +24,137 @@ import pyLDAvis.gensim
 import matplotlib.pyplot as plt
 
 
-class NewsArticle:
-    '''
-    A class of news article.
+class NewsPath:
+    root = os.path.dirname(os.path.abspath(__file__))
 
-    Attributes
-    ----------
-    url : str
-        | The article url.
-    id : str
-        | The identification code for the article.
-    query : list
-        | A list of queries that were used to search the article.
-    title : str
-        | The title of the article.
-    date : str
-        | The uploaded date of the article. (format : yyyymmdd)
-    category : str
-        | The category that the article belongs to.
-    content : str
-        | The article content.
-    content_normalized : str
-        | Normalized content of the article.
+    fdir_data = os.path.sep.join((root, 'data'))
+    
+    fdir_corpus = os.path.sep.join((root, 'corpus'))
+    fdir_model = os.path.sep.join((root, 'model'))
+    fdir_thesaurus = os.path.sep.join((root, 'thesaurus'))
+    fdir_result = os.path.sep.join((root, 'result'))
 
-    Methods
-    -------
-    extend_query
-        | Extend the query list with the additional queries that were used to search the article.
-    '''
+    fdir_query = os.path.sep.join((root, 'query'))
+    fdir_url_list = os.path.sep.join((fdir_data, 'url_list'))
+    fdir_articles = os.path.sep.join((root, 'articles'))
 
-    def __init__(self, **kwargs):
-        self.url = kwargs.get('url', '')
-        self.id = kwargs.get('id', '')
-        self.query = []
 
-        self.title = kwargs.get('title', '')
-        self.date = kwargs.get('date', '')
-        self.category = kwargs.get('category', '')
-        self.content = kwargs.get('content', '')
+class NewsIO(NewsPath):
+    def memory_usage(self):
+        print('------------------------------------------------------------')
+        active_memory = psutil.virtual_memory()._asdict()['used']
+        print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
+        print('--------------------------------------------------')
 
-        self.preprocess = False
-        self.sents = kwargs.get('sents', '')
-        self.normalized_sents = kwargs.get('normalized_sents', '')
-        self.nouns = kwargs.get('nouns', '')
-        self.nouns_stop = kwargs.get('nouns_stop', '')
+    def save(self, _object, _type, fname_object, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
 
-    def extend_query(self, query_list):
+        os.makedirs(fdir_object, exist_ok=True)
+        with open(fpath_object, 'wb') as f:
+            pk.dump(_object, f)
+
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
+
+    def load(self, fname_object, _type, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+        with open(fpath_object, 'rb') as f:
+            _object = pk.load(f)
+
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
+
+        return _object
+
+    def read_thesaurus(self, fname_thesaurus):
+        fpath_thesaurus = os.path.sep.join((self.fdir_thesaurus, fname_thesaurus))
+        with open(fpath_thesaurus, 'r', encoding='utf-8') as f:
+            word_list = list(set([w.strip() for w in f.read().strip().split('\n')]))
+
+        return word_list
+
+
+class NewsFunc(NewsPath):
+    def text2sents(self, text):
         '''
-        A method to extend the query list.
-
-        Attributes
-        ----------
-        query_list : list
-            | A list of queries to be extended.
+        text : a str object of doc.content
         '''
 
-        queries = self.query
-        queries.extend(query_list)
-        self.query = list(set(queries))
+        sents = ['{}다.'.format(sent) for sent in text.split('다.')]
+        return sents
+
+    def parse_fname_url_list(self, fname_url_list):
+        query_part, date_part = fname_url_list.replace('.pk', '').split('_')
+        query = query_part.split('-')[-1]
+        date = date_part.split('-')[-1]
+        return query, date
+
+
+# class NewsArticle:
+#     '''
+#     A class of news article.
+
+#     Attributes
+#     ----------
+#     url : str
+#         | The article url.
+#     id : str
+#         | The identification code for the article.
+#     query : list
+#         | A list of queries that were used to search the article.
+#     title : str
+#         | The title of the article.
+#     date : str
+#         | The uploaded date of the article. (format : yyyymmdd)
+#     category : str
+#         | The category that the article belongs to.
+#     content : str
+#         | The article content.
+#     content_normalized : str
+#         | Normalized content of the article.
+
+#     Methods
+#     -------
+#     extend_query
+#         | Extend the query list with the additional queries that were used to search the article.
+#     '''
+
+#     def __init__(self, **kwargs):
+#         self.fpath_article = kwargs.get('fpath_article', '')
+#         self.fpath_corpus = kwargs.get('fpath_corpus', '')
+
+#         self.url = kwargs.get('url', '')
+#         self.id = kwargs.get('id', '')
+#         self.query = []
+
+#         self.title = kwargs.get('title', '')
+#         self.date = kwargs.get('date', '')
+#         self.category = kwargs.get('category', '')
+#         self.content = kwargs.get('content', '')
+
+#         self.preprocess = False
+#         self.sents = kwargs.get('sents', '')
+#         self.normalized_sents = kwargs.get('normalized_sents', '')
+#         self.nouns = kwargs.get('nouns', '')
+#         self.nouns_stop = kwargs.get('nouns_stop', '')
+
+#     def extend_query(self, query_list):
+#         '''
+#         A method to extend the query list.
+
+#         Attributes
+#         ----------
+#         query_list : list
+#             | A list of queries to be extended.
+#         '''
+
+#         queries = self.query
+#         queries.extend(query_list)
+#         self.query = list(set(queries))
 
 
 class NewsDate:
@@ -111,68 +188,51 @@ class NewsDate:
 
     def __yearmonth(self):
         return datetime.strptime(self.date, '%Y%m%d').strftime('%Y%m')
-        
-
-class NewsCorpus:
-    def __init__(self, fdir_corpus, **kwargs):
-        self.fdir_corpus = fdir_corpus
-
-    def __len__(self):
-        return len(os.listdir(self.fdir_corpus))
-
-    def iter(self, **kwargs):
-        flist = os.listdir(self.fdir_corpus)
-        for fname in tqdm(flist):
-            fpath = os.path.sep.join((self.fdir_corpus, fname))
-            try:
-                with open(fpath, 'rb') as f:
-                    yield pk.load(f)
-            except:
-                print(f'UnpicklingError: {fname}')
-
-    def iter_sampling(self, n, random_state=42):
-        flist = random.sample(os.listdir(self.fdir_corpus), k=n)
-        for fname in tqdm(flist):
-            fpath = os.path.sep.join((self.fdir_corpus, fname))
-            with open(fpath, 'rb') as f:
-                yield pk.load(f)
 
 
-class NewsMonthlyCorpus:
-    def __init__(self, fdir_corpus, **kwargs):
-        self.fdir_corpus = fdir_corpus
-        self.flist = sorted(os.listdir(self.fdir_corpus), reverse=False)
+class NewsCorpus(NewsPath):
+    def __init__(self, **kwargs):
+        # self.yearmonth_list = sorted([dirs for _, dirs, _ in os.walk(os.path.sep.join((self.fdir_corpus, 'yearmonth'))) if dirs])
+        self.start = kwargs.get('start', sorted(self.fdir_corpus)[0])
+        self.end = kwargs.get('end', sorted(self.fdir_corpus)[-1])
 
-        self.start = kwargs.get('start', self.flist[0])
-        self.end = kwargs.get('end', self.flist[-1])
         self.yearmonth_list = self.__get_yearmonth_list()
 
     def __len__(self):
-        return len(self.yearmonth_list)
+        return len(glob(self.fdir_corpus+'/*/*.json'))
 
     def __get_yearmonth_list(self):
         yearmonth_start = datetime.strptime(self.start, '%Y%m').strftime('%Y-%m-%d')
         yearmonth_end = datetime.strptime(self.end, '%Y%m').strftime('%Y-%m-%d')
         return pd.date_range(yearmonth_start, yearmonth_end, freq='MS').strftime('%Y%m').tolist()
 
-    def iter_monthly(self):
-        for yearmonth in tqdm(self.yearmonth_list):
-            fdir_corpus_yearmonth = os.path.sep.join((self.fdir_corpus, yearmonth))
-            corpus_yearmonth = []
-            for fname in os.listdir(fdir_corpus_yearmonth):
-                fpath = os.path.sep.join((fdir_corpus_yearmonth, fname))
-                with open(fpath, 'rb') as f:
-                    corpus_yearmonth.append(pk.load(f))
-
-            yield corpus_yearmonth
-
     def iter(self):
+        for fpath in tqdm(glob(self.fdir_corpus+'/*/*.json')):
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    yield json.load(f)
+            except:
+                print(f'ArticleReadingError: {fpath}')
+
+    def iter_sampling(self, n, random_state=42):
+        fpath_list = random.sample(glob(self.fdir_corpus+'/*/*.json'), k=n)
+        for fpath in tqdm(flist):
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    yield json.load(f)
+            except:
+                print(f'ArticleReadingError: {fpath}')            
+
+    def iter_month(self):
         for yearmonth in tqdm(self.yearmonth_list):
-            fdir_corpus_yearmonth = os.path.sep.join((self.fdir_corpus, yearmonth))
-            for fname in os.listdir(fdir_corpus_yearmonth):
-                fpath = os.path.sep.join((fdir_corpus_yearmonth, fname))
-                with open(fpath, 'rb') as f:
-                    yield pk.load(f)
+            article_list = []
+            for fpath in glob(os.path.sep.join((self.fdir_corpus+yearmonth+'*.json'))):
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        article_list.append(json.load(f))
+                except:
+                    print(f'ArticleReadingError: {fpath}')
+            yield article_list
 
 
 class Word:
