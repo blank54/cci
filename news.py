@@ -438,7 +438,11 @@ class NumericData():
         _dict['yearmonth'] = time_range
         for yearmonth, attr, value in sorted(self.data_list, key=lambda x:x[0], reverse=False):
             if yearmonth in time_range:
-                _dict[attr].append(value)
+                try:
+                    value2num = float(value)
+                except ValueError:
+                    value2num = 0
+                _dict[attr].append(value2num)
             else:
                 continue
 
