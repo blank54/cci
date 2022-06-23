@@ -7,17 +7,15 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsCorpusMonthly, LdaGridSearchResult
-from newsutil import NewsIO, NewsPath
+from news import NewsCorpus, LdaGridSearchResult, NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()
 
+import json
 import itertools
 import numpy as np
-from pathlib import Path
+from copy import deepcopy
 from collections import defaultdict
-
-import matplotlib.pyplot as plt
 
 
 def show_grid_search_result(lda_gs_result):
@@ -58,18 +56,45 @@ def export_topic_keywords(lda_model, MAX_WORD_TOPIC, fname_topic_keywords):
     topic_keywords_df = pd.DataFrame(topic_keywords)
     topic_keywords_df.to_excel(excel_writer=os.path.sep.join((newspath.fdir_result, fname_topic_keywords)))
 
-def assign_topic_to_articles():
+def assign_topic_to_articles(fname_lda_opt, fname_id2word, corpus):
+    lda_model = newsio.load(_type='model', fname_object=fname_lda_opt)
+    id2word = newsio.load(_type='data', fname_object=fname_id2word)
 
+    for doc in corpus.iter():
+        ## Assign topic id
+        doc_bow = id2word.doc2bow(itertools.chain(*doc['nouns_stop']))
+        topic_scores = lda_model.inference([doc_bow])[0]
+        topic_id = np.argmax(topic_scores)
+
+        doc['fname_lda_model'] = fname_lda_opt
+        doc['topic_id'] = str(topic_id)
+
+        ## Save corpus
+        fpath_original = doc['fpath_article_corpus']
+        fpath_processed = fpath_original.replace('corpus', 'corpus_topic_assigned')
+        doc['fpath_article_corpus'] = deepcopy(fpath_processed)
+        os.makedirs(os.path.dirname(fpath_processed), exist_ok=True)
+
+        with open(fpath_processed, 'w', encoding='utf-8') as f:
+            json.dump(doc, f)
+
+def filter_corpus_by_topic(corpus_filtered):
+    for doc in corpus_filtered.iter():
+        ## Save corpus
+        fpath_original = doc['fpath_article_corpus']
+        fpath_processed = fpath_original.replace('corpus_topic_assigned', 'corpus_topic_filtered')
+        doc['fpath_article_corpus'] = deepcopy(fpath_processed)
+        os.makedirs(os.path.dirname(fpath_processed), exist_ok=True)
+
+        with open(fpath_processed, 'w', encoding='utf-8') as f:
+            json.dump(doc, f)
 
 
 if __name__ == '__main__':
     ## Filenames
     SAMPLE_SIZE = 100000
     fname_gs_result = f'lda_gs_{SAMPLE_SIZE}.json'
-
-    fname_docs_dict = f'lda/docs_dict_{SAMPLE_SIZE}.json'
     fname_id2word = f'lda/id2word_{SAMPLE_SIZE}.json'
-    fname_docs_bow = f'lda/docs_bow_{SAMPLE_SIZE}.json'
 
     fname_topic_keywords = 'topic_keywords.xlsx'
 
@@ -78,6 +103,8 @@ if __name__ == '__main__':
 
     VIS_GS = False
     TOPIC_NAME_ASSIGNMENT = False
+    DOC_TOPIC_ASSIGNMENT = False
+    TOPIC_FILTER = True
 
     ## Data import
     print('============================================================')
@@ -93,23 +120,49 @@ if __name__ == '__main__':
         pass
 
     ## Find optimum
-    print('--------------------------------------------------')
+    print('============================================================')
     print('Optimum model')
 
     fname_lda_opt, coherence_opt = find_optimum(lda_gs_result)
     lda_model = newsio.load(_type='model', fname_object=fname_lda_opt)
-    print(f'  | fname    : {fname_lda_opt}')
     print(f'  | model    : {type(lda_model)}')
     print(f'  | coherence: {coherence_opt:,.03f}')
 
     ## Topic name assignment
-    docs_dict = newsio.load(_type='data', fname_object=fname_docs_dict)
-    id2word = newsio.load(_type='data', fname_object=fname_id2word)
-    docs_bow = newsio.load(_type='data', fname_object=fname_docs_bow)
-
     if TOPIC_NAME_ASSIGNMENT:
         export_topic_keywords(lda_model, MAX_WORD_TOPIC, fname_topic_keywords)
     else:
         pass
 
     ## Topic assignment
+    print('============================================================')
+    print('Topic assignment')
+    print('--------------------------------------------------')
+    print('Load corpus')
+
+    corpus = NewsCorpus(start='200501', end='201912')
+    DOCN = len(corpus)
+    print(f'  | Corpus: {DOCN:,}')
+
+    print('--------------------------------------------------')
+    print('Assign topic for each doc')
+
+    if DOC_TOPIC_ASSIGNMENT:
+        assign_topic_to_articles(fname_lda_opt, fname_id2word, corpus)
+    else:
+        pass
+
+    print('--------------------------------------------------')
+    print('Filter articles by topics')
+
+    topic_ids_filtered = ['6', '12', '16', '27']
+    corpus_filtered = NewsCorpus(fdir_corpus=os.path.sep.join((newspath.root, 'corpus_topic_assigned')),
+                                 topic_filtered=True,
+                                 topic_ids=topic_ids_filtered,
+                                 start='200501',
+                                 end='201912')
+
+    if TOPIC_FILTER:
+        filter_corpus_by_topic(corpus_filtered)
+    else:
+        pass

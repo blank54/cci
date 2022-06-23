@@ -7,14 +7,15 @@ import sys
 import random
 import json
 import psutil
-from glob import glob
+import itertools
 import numpy as np
 import pickle as pk
 import pandas as pd
 from tqdm import tqdm
+from glob import glob
 from pathlib import Path
-from collections import defaultdict
 from datetime import datetime
+from collections import defaultdict
 
 import gensim.corpora as corpora
 from gensim.models.ldamodel import LdaModel
@@ -190,8 +191,10 @@ class NewsDate:
         return datetime.strptime(self.date, '%Y%m%d').strftime('%Y%m')
 
 
-class NewsCorpus(NewsPath):
+class NewsCorpus():
     def __init__(self, **kwargs):
+        self.fdir_corpus = kwargs.get('fdir_corpus', NewsPath().fdir_corpus)
+
         # self.yearmonth_list = sorted([dirs for _, dirs, _ in os.walk(os.path.sep.join((self.fdir_corpus, 'yearmonth'))) if dirs])
         self.start = kwargs.get('start', sorted(os.listdir(self.fdir_corpus))[0])
         self.end = kwargs.get('end', sorted(os.listdir(self.fdir_corpus))[-1])
@@ -234,7 +237,7 @@ class NewsCorpus(NewsPath):
         return pd.date_range(yearmonth_start, yearmonth_end, freq='MS').strftime('%Y%m').tolist()
 
     def iter(self, sampling=False):
-        fpath_list = itertools.chain(*[[os.path.sep.join(fdir, fname) for fname in os.listdir(fdir)] for fdir in self.fdir_list])
+        fpath_list = list(itertools.chain(*[[os.path.sep.join((fdir, fname)) for fname in os.listdir(fdir)] for fdir in self.fdir_list]))
 
         if sampling:
             fpath_list = random.sample(fpath_list, k=n)
@@ -252,13 +255,15 @@ class NewsCorpus(NewsPath):
                             yield doc
                 except:
                     print(f'ArticleReadingError: {fpath}')
+                    yield None
         else:
             for fpath in tqdm(fpath_list):
-                try:
-                    with open(fpath, 'r', encoding='utf-8') as f:
-                        yield json.load(f)
-                except:
-                    print(f'ArticleReadingError: {fpath}')
+                # try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    yield json.load(f)
+                # except:
+                #     print(f'ArticleReadingError: {fpath}')
+                #     yield None
 
     def iter_month(self):
         if self.topic_filtered:
@@ -271,7 +276,7 @@ class NewsCorpus(NewsPath):
                             if doc['topic_id'] in self.topic_ids:
                                 continue
                             else:
-                                doc_list.append()
+                                doc_list.append(doc)
                     except:
                         print(f'ArticleReadingError: {fpath}')
                 yield doc_list
