@@ -269,7 +269,7 @@ class NewsCorpus():
         if self.topic_filtered:
             for yearmonth in tqdm(self.yearmonth_list):
                 doc_list = []
-                for fpath in glob(os.path.sep.join((self.fdir_corpus+yearmonth+'*.json'))):
+                for fpath in glob(self.fdir_corpus+'/'+yearmonth+'/*.json'):
                     try:
                         with open(fpath, 'r', encoding='utf-8') as f:
                             doc = json.load(f)
@@ -279,17 +279,17 @@ class NewsCorpus():
                                 doc_list.append(doc)
                     except:
                         print(f'ArticleReadingError: {fpath}')
-                yield doc_list
+                yield yearmonth, doc_list
         else:
             for yearmonth in tqdm(self.yearmonth_list):
                 doc_list = []
-                for fpath in glob(os.path.sep.join((self.fdir_corpus+yearmonth+'*.json'))):
+                for fpath in glob(self.fdir_corpus+'/'+yearmonth+'/*.json'):
                     try:
                         with open(fpath, 'r', encoding='utf-8') as f:
                             doc_list.append(json.load(f))
                     except:
                         print(f'ArticleReadingError: {fpath}')
-                yield doc_list
+                yield yearmonth, doc_list
 
 
 class Word:

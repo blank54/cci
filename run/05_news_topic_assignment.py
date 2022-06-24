@@ -82,7 +82,7 @@ def filter_corpus_by_topic(corpus_filtered):
     for doc in corpus_filtered.iter():
         ## Save corpus
         fpath_original = doc['fpath_article_corpus']
-        fpath_processed = fpath_original.replace('corpus_topic_assigned', 'corpus_topic_filtered')
+        fpath_processed = fpath_original.replace('corpus_topic', 'corpus_topic_filtered')
         doc['fpath_article_corpus'] = deepcopy(fpath_processed)
         os.makedirs(os.path.dirname(fpath_processed), exist_ok=True)
 
