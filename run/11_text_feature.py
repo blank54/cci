@@ -12,70 +12,64 @@ newsio = NewsIO()
 newspath = NewsPath()
 
 import json
+import itertools
+import numpy as np
 from tqdm import tqdm
 from collections import defaultdict, Counter
 
 
-# def build_counter(do_build_counter, **kwargs):
-#     global fname_word_counter, fname_doc_counter
+def build_counter(corpus):
+    word_counter = defaultdict(int)
+    doc_counter = defaultdict(int)
+    attribute_errors = []
+    for doc in corpus.iter():
+        try:
+            for w in itertools.chain(*doc['nouns_stop']):
+                word_counter[w] += 1
+            for w in set(itertools.chain(*doc['nouns_stop'])):
+                doc_counter[w] += 1
+        except AttributeError:
+            attribute_errors.append(doc)
 
-#     if do_build_counter:
-#         corpus = kwargs.get('corpus', '')
+    if attribute_errors:
+        print(f'  | errors during counting words: {len(attribute_errors):,}')
+    else:
+        pass
 
-#         word_counter = defaultdict(int)
-#         doc_counter = defaultdict(int)
-#         attribute_errors = []
-#         for doc in corpus.iter():
-#             try:
-#                 for w in itertools.chain(*doc.nouns_stop):
-#                         word_counter[w] += 1
-#                 for w in set(itertools.chain(*doc.nouns_stop)):
-#                     doc_counter[w] += 1
-#             except AttributeError:
-#                 attribute_errors.append(doc)
+    return word_counter, doc_counter
 
-#         newsio.save(_object=word_counter, _type='model', fname_object=fname_word_counter, verbose=False)
-#         newsio.save(_object=doc_counter, _type='model', fname_object=fname_doc_counter, verbose=False)
+def build_tfidf(DO_BUILD_TFIDF, **kwargs):
+    global fname_word_counter, fname_doc_counter, fname_tfidf
 
-#         print(f'  | fdir : {newspath.fdir_model}')
-#         print(f'  | fname_word_counter: {fname_word_counter}')
-#         print(f'  | fname_doc_counter: {fname_doc_counter}')
-#         print(F'  | errors: {len(attribute_errors):,}')
+    if DO_BUILD_TFIDF:
+        corpus = kwargs.get('corpus', '')
+        DOCN = len(corpus)
+        word_counter, doc_counter = build_counter(corpus)
 
-#     else:
-#         word_counter = newsio.load(fname_object=fname_word_counter, _type='model', verbose=False)
-#         doc_counter = newsio.load(fname_object=fname_doc_counter, _type='model', verbose=False)
+        tfidf = defaultdict(dict)
+        for w in tqdm(word_counter.keys()):
+            word_tf = word_counter[w]
+            word_df = doc_counter[w]
+            word_idf = np.log(DOCN / (word_df+1))
+            word_tfidf = word_tf*word_idf
 
-#     return word_counter, doc_counter
+            tfidf[w] = {
+                'tf': word_tf,
+                'df': word_df,
+                'idf': word_idf,
+                'tfidf': word_tfidf
+            }
 
-# def build_tfidf(do_build_tfidf, **kwargs):
-#     global fname_tfidf
+        newsio.save(_object=word_counter, _type='model', fname_object=fname_word_counter, verbose=False)
+        newsio.save(_object=doc_counter, _type='model', fname_object=fname_doc_counter, verbose=False)
+        newsio.save(_object=tfidf, _type='model', fname_object=fname_tfidf, verbose=False)
 
-#     if do_build_tfidf:
-#         corpus = kwargs.get('corpus', '')
-#         word_counter = kwargs.get('word_counter', '')
-#         doc_counter = kwargs.get('doc_counter', '')
+    else:
+        word_counter = newsio.load(fname_object=fname_word_counter, _type='model', verbose=False)
+        doc_counter = newsio.load(fname_object=fname_doc_counter, _type='model', verbose=False)
+        tfidf = newsio.load(fname_object=fname_tfidf, _type='model', verbose=False)
 
-#         tfidf = defaultdict(dict)
-#         for w in tqdm(word_counter.keys()):
-#             word_tf = word_counter[w]
-#             word_df = doc_counter[w]
-#             word_idf = np.log(DOCN / (df+1))
-#             word_tfidf = tf*idf
-
-#             tfidf[w] = {
-#                 'tf': word_tf,
-#                 'df': word_df,
-#                 'idf': word_idf,
-#                 'tfidf': word_tfidf
-#             }
-
-#         newsio.save(_object=tfidf, _type='model', fname_object=fname_tfidf, verbose=False)
-
-#     else:
-#         tfidf = newsio.load(fname_object=fname_tfidf, _type='model', verbose=False)
-
-#     return tfidf
+    return word_counter, tfidf
 
 def text_feature_first_order(corpus, fname_text_feature_first_order):
     text_feature_first = defaultdict(dict)
@@ -169,51 +163,60 @@ if __name__ == '__main__':
     ## Filenames
     fname_text_feature_first_order = 'text_feature_first_order.json'
     fname_text_feature_second_order = 'text_feature_second_order.json'
-    # fname_tfidf = 'tfidf.pk'
-    # fname_word_counter = 'word_counter.pk'
-    # fname_doc_counter = 'doc_counter.pk'
+    fname_tfidf = 'tfidf.pk'
+    fname_word_counter = 'word_counter.pk'
+    fname_doc_counter = 'doc_counter.pk'
 
     ## Parameters
     DO_FIRST_ORDER = False
     DO_SECOND_ORDER = False
-    # do_build_counter = True
-    # do_build_tfidf = True
+    DO_BUILD_TFIDF = False
+    TOPN = 100
 
     ## Data import
     print('============================================================')
-    print('--------------------------------------------------')
     print('Load corpus')
 
-    corpus = NewsCorpus(fdir_corpus=os.path.sep.join((newspath.root, 'corpus_topic_filtered')),
+    corpus = NewsCorpus(dname_corpus='corpus_topic_filtered',
                         start='200501',
                         end='201912')
 
     ## Process
     print('============================================================')
-    print('Text feature engineering')
-    print('--------------------------------------------------')
-    print('First order')
+    print('Text feature engineering - first order')
 
     if DO_FIRST_ORDER:
         text_feature_first_order(corpus, fname_text_feature_first_order)
     else:
         pass
 
-    print('--------------------------------------------------')
-    print('Second order')
+    print('Text feature engineering - second order')
 
     if DO_SECOND_ORDER:
         text_feature_second_order(corpus, fname_text_feature_first_order, fname_text_feature_second_order)
     else:
         pass
 
-    print('--------------------------------------------------')
-    print('Evaluate text features')
-
+    print('============================================================')
+    print('Load text features (all)')
     text_feature_first, text_feature_second = load_text_feature()
 
     word_set = []
     for yearmonth in tqdm(corpus.yearmonth_list):
         word_set.extend(text_feature_first['word_count'][yearmonth].values())
 
-    print('# of individual words: {:,}'.format(len(word_set)))
+    print('  | # of individual words (Feature engineering): {:,}'.format(len(word_set)))
+
+    print('Build TF-IDF')
+
+    word_counter, tfidf = build_tfidf(DO_BUILD_TFIDF=DO_BUILD_TFIDF, corpus=corpus)
+
+    print('  | # of individual words (TF-IDF): {:,}'.format(len(word_counter)))
+
+    print('Select TOPN words')
+
+    word_sorted = list(sorted([(word, tfidf[word]['tfidf']) for word in tfidf], key=lambda x:x[1], reverse=True))[:TOPN]
+    
+    print(f'  | # of words: {len(word_sorted)}')
+    for word, _ in word_sorted[:30]:
+        print('  | {}: {:.02f} -> {:.02f} -> {:.02f}'.format(word, tfidf[word]['tf'], tfidf[word]['df'], tfidf[word]['tfidf']))
