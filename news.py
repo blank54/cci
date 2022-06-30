@@ -193,7 +193,8 @@ class NewsDate:
 
 class NewsCorpus():
     def __init__(self, **kwargs):
-        self.fdir_corpus = kwargs.get('fdir_corpus', NewsPath().fdir_corpus)
+        self.dname_corpus = kwargs.get('dname_corpus', 'corpus')
+        self.fdir_corpus = os.path.sep.join((NewsPath().root, self.dname_corpus))
 
         # self.yearmonth_list = sorted([dirs for _, dirs, _ in os.walk(os.path.sep.join((self.fdir_corpus, 'yearmonth'))) if dirs])
         self.start = kwargs.get('start', sorted(os.listdir(self.fdir_corpus))[0])
@@ -389,36 +390,35 @@ class NumericData():
     def __init__(self, fdir, **kwargs):
         self.fdir = fdir
 
-        self.data_list = self.__read_data()
-        self.attrs = list(set([attr for _, attr, _ in self.data_list]))
+        self.data_list, self.var_list = self.__read_data()
+        self.vars = list(set([var for _, var, _ in self.data_list]))
 
-        self.num_vars = len(os.listdir(self.fdir))
-        self.num_attrs = len(self.attrs)
+        self.num_indicators = len(os.listdir(self.fdir))
+        self.num_vars = len(self.vars)
 
         self.start = kwargs.get('start', 'InputRequired')
         self.end = kwargs.get('end', 'InputRequired')
 
     def __read_data(self):
         data_list = []
+        var_list = []
         for fname in os.listdir(self.fdir):
             fpath = os.path.sep.join((self.fdir, fname))
 
             _df = pd.read_excel(fpath, na_values='')
             for _, row in _df.iterrows():
-                year = row['yearmonth'].year
-                month = row['yearmonth'].month
-                yearmonth = f'{year}{month:02}'
+                year = datetime.strftime(row['yearmonth'], '%Y')
+                month = datetime.strftime(row['yearmonth'], '%m')
+                yearmonth = '{}{}'.format(year, month)
 
-                if yearmonth == 'nannan':
-                    print(row)
-
-                for attr in row.keys():
-                    if attr == 'yearmonth':
+                for var in row.keys():
+                    if var == 'yearmonth':
                         continue
                     else:
-                        data_list.append((yearmonth, attr, row[attr]))
+                        data_list.append((yearmonth, var, row[var]))
+                        var_list.append(var)
 
-        return data_list
+        return data_list, list(set(var_list))
 
     def __set_time_range(self, start, end):
         '''
@@ -441,13 +441,13 @@ class NumericData():
 
         _dict = defaultdict(list)
         _dict['yearmonth'] = time_range
-        for yearmonth, attr, value in sorted(self.data_list, key=lambda x:x[0], reverse=False):
+        for yearmonth, var, value in sorted(self.data_list, key=lambda x:x[0], reverse=False):
             if yearmonth in time_range:
                 try:
                     value2num = float(value)
                 except ValueError:
                     value2num = 0
-                _dict[attr].append(value2num)
+                _dict[var].append(value2num)
             else:
                 continue
 
