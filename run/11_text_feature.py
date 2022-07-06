@@ -187,8 +187,8 @@ if __name__ == '__main__':
 
     if DO_WORD:
         text_feature_first, text_feature_second = build_text_feature(corpus)
-        newsio.save_json(_object=text_feature_first, _type='data', fname_object=fname_text_feature_first, verbose=False)
-        newsio.save_json(_object=text_feature_second, _type='data', fname_object=fname_text_feature_second, verbose=False)
+        newsio.save_json(_object=text_feature_first, _type='data', fname_object=fname_text_feature_first)
+        newsio.save_json(_object=text_feature_second, _type='data', fname_object=fname_text_feature_second)
     else:
         text_feature_first = newsio.load_json(fname_object=fname_text_feature_first, _type='data')
         text_feature_second = newsio.load_json(fname_object=fname_text_feature_second, _type='data')
@@ -196,8 +196,8 @@ if __name__ == '__main__':
 
     if DO_TOPIC:
         text_feature_topic_first, text_feature_topic_second = build_text_feature_topic(corpus)
-        newsio.save_json(_object=text_feature_topic_first, _type='data', fname_object=fname_text_feature_topic_first, verbose=False)
-        newsio.save_json(_object=text_feature_topic_second, _type='data', fname_object=fname_text_feature_topic_second, verbose=False)
+        newsio.save_json(_object=text_feature_topic_first, _type='data', fname_object=fname_text_feature_topic_first)
+        newsio.save_json(_object=text_feature_topic_second, _type='data', fname_object=fname_text_feature_topic_second)
     else:
         text_feature_topic_first = newsio.load_json(fname_object=fname_text_feature_topic_first, _type='data')
         text_feature_topic_second = newsio.load_json(fname_object=fname_text_feature_topic_second, _type='data')
@@ -213,9 +213,9 @@ if __name__ == '__main__':
 
     if DO_BUILD_TFIDF:
         word_counter, tfidf = build_tfidf(corpus=corpus)
-        newsio.save(_object=word_counter, _type='model', fname_object=fname_word_counter, verbose=False)
-        newsio.save(_object=doc_counter, _type='model', fname_object=fname_doc_counter, verbose=False)
-        newsio.save(_object=tfidf, _type='model', fname_object=fname_tfidf, verbose=False)
+        newsio.save(_object=word_counter, _type='model', fname_object=fname_word_counter)
+        newsio.save(_object=doc_counter, _type='model', fname_object=fname_doc_counter)
+        newsio.save(_object=tfidf, _type='model', fname_object=fname_tfidf)
     else:
         word_counter = newsio.load(fname_object=fname_word_counter, _type='model')
         doc_counter = newsio.load(fname_object=fname_doc_counter, _type='model')
