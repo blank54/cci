@@ -77,11 +77,11 @@ def word_count_ratio(counter_now, counter_before):
         except KeyError:
             count_before = 0.0001
 
-        counter_ratio[word] = count_now - count_before
+        counter_ratio[word] = count_now / count_before
     return counter_ratio
 
 def build_text_feature(corpus, ):
-    print('  | Feature: count')
+    print('## Feature: count')
     text_feature_first = defaultdict(dict)
     for yearmonth, docs in corpus.iter_month():
         word_list = []
@@ -93,12 +93,12 @@ def build_text_feature(corpus, ):
         text_feature_first[yearmonth]['doc_count'] = len(docs)
         text_feature_first[yearmonth]['word_count'] = Counter(word_list)
 
-    print('  | Feature: word count portion')
+    print('## Feature: word count portion')
     yearmonth_list = sorted(corpus.yearmonth_list, reverse=False)
     for yearmonth in tqdm(yearmonth_list):
         text_feature_first[yearmonth]['word_count_portion'] = {w: c/sum(text_feature_first[yearmonth]['word_count'].values()) for w, c in text_feature_first[yearmonth]['word_count'].items()}
 
-    print('  | Feature: count - diff and ratio')
+    print('## Feature: count - diff and ratio')
     text_feature_second = defaultdict(dict)
     for idx in tqdm(range(1, len(yearmonth_list))):
         _before = yearmonth_list[idx-1]
@@ -114,36 +114,42 @@ def build_text_feature(corpus, ):
     return text_feature_first, text_feature_second
 
 def build_text_feature_topic(corpus):
-    print('  | Feature: topic count')
+    print('## Feature: topic count')
     text_feature_topic_first = defaultdict(dict)
     for yearmonth, docs in corpus.iter_month():
+        if yearmonth in text_feature_topic_first.keys():
+            pass
+        else:
+            text_feature_topic_first[yearmonth]['count'] = defaultdict(int)
+
         for doc in docs:
             topic_id = doc['topic_id']
-            if topic_id in text_feature_topic_first.keys():
-                try:
-                    text_feature_topic_first[yearmonth][topic_id] += 1
-                except KeyError:
-                    text_feature_topic_first[yearmonth][topic_id] = 1
-            else:
-                text_feature_topic_first[yearmonth] = defaultdict(int)
+            text_feature_topic_first[yearmonth]['count'][topic_id] += 1
 
-    print('  | Feature: topic portion')
+    print('## Feature: topic portion')
     yearmonth_list = sorted(corpus.yearmonth_list, reverse=False)
-    topic_list = list(text_feature_topic_first.keys())
     for yearmonth in tqdm(yearmonth_list):
-        topic_sum = sum(text_feature_topic_first[yearmonth].values())
+        topic_list = list(text_feature_topic_first[yearmonth]['count'].keys())
+        text_feature_topic_first[yearmonth]['portion'] = {}
+        topic_sum = sum(text_feature_topic_first[yearmonth]['count'].values())
         for topic_id in topic_list:
-            text_feature_topic_first[yearmonth][f'{topic_id}_portion'] = text_feature_topic_first[yearmonth][topic_id] / topic_sum
+            text_feature_topic_first[yearmonth]['portion'][topic_id] = text_feature_topic_first[yearmonth]['count'][topic_id] / topic_sum
 
-    print('  | Feature: topic count - diff and ratio')
+    print('## Feature: topic count - diff and ratio')
     text_feature_topic_second = defaultdict(dict)
     for idx in tqdm(range(1, len(yearmonth_list))):
         _before = yearmonth_list[idx-1]
         _now = yearmonth_list[idx]
 
+        topic_list = list(text_feature_topic_first[yearmonth]['count'].keys())
+        text_feature_topic_second[_now]['diff'] = defaultdict(float)
+        text_feature_topic_second[_now]['ratio'] = defaultdict(float)
         for topic_id in topic_list:
-            text_feature_topic_second[_now][f'{topic_id}_diff'] = text_feature_topic_first[_now][topic_id] - text_feature_topic_first[_before][topic_id]
-            text_feature_topic_second[_now][f'{topic_id}_ratio'] = text_feature_topic_first[_now][topic_id] / text_feature_topic_first[_before][topic_id]
+            text_feature_topic_second[_now]['diff'][topic_id] = text_feature_topic_first[_now]['count'][topic_id] - text_feature_topic_first[_before]['count'][topic_id]
+            try:
+                text_feature_topic_second[_now]['ratio'][topic_id] = text_feature_topic_first[_now]['count'][topic_id] / text_feature_topic_first[_before]['count'][topic_id]
+            except ZeroDivisionError:
+                text_feature_topic_second[_now]['ratio'][topic_id] = text_feature_topic_first[_now]['count'][topic_id] / 1e4
 
     return text_feature_topic_first, text_feature_topic_second
 
@@ -154,18 +160,18 @@ if __name__ == '__main__':
     fname_text_feature_second = 'text_feature_second.json'
     fname_text_feature_topic_first = 'text_feature_topic_first.json'
     fname_text_feature_topic_second = 'text_feature_topic_second.json'
-    
 
     fname_tfidf = 'tfidf.pk'
     fname_word_counter = 'word_counter.pk'
     fname_doc_counter = 'doc_counter.pk'
 
+    fname_target_word_list = 'target_word_list.json'
+
     ## Parameters
-    DO_FIRST_ORDER = True
-    DO_SECOND_ORDER = True
-    DO_TOPIC = True
+    DO_WORD = False
+    DO_TOPIC = False
     DO_BUILD_TFIDF = False
-    TOPN = 100
+    TOPN = 1000
 
     ## Data import
     print('============================================================')
@@ -179,10 +185,10 @@ if __name__ == '__main__':
     print('============================================================')
     print('Text feature engineering')
 
-    if DO_SECOND_ORDER:
+    if DO_WORD:
         text_feature_first, text_feature_second = build_text_feature(corpus)
-        newsio.save_json(_object=text_feature_first, _type='data', fname_object=fname_text_feature_first)
-        newsio.save_json(_object=text_feature_second, _type='data', fname_object=fname_text_feature_second)
+        newsio.save_json(_object=text_feature_first, _type='data', fname_object=fname_text_feature_first, verbose=False)
+        newsio.save_json(_object=text_feature_second, _type='data', fname_object=fname_text_feature_second, verbose=False)
     else:
         text_feature_first = newsio.load_json(fname_object=fname_text_feature_first, _type='data')
         text_feature_second = newsio.load_json(fname_object=fname_text_feature_second, _type='data')
@@ -190,8 +196,8 @@ if __name__ == '__main__':
 
     if DO_TOPIC:
         text_feature_topic_first, text_feature_topic_second = build_text_feature_topic(corpus)
-        newsio.save_json(_object=text_feature_topic_first, _type='data', fname_object=fname_text_feature_topic_first_order)
-        newsio.save_json(_object=text_feature_topic_second, _type='data', fname_object=fname_text_feature_topic_second_order)
+        newsio.save_json(_object=text_feature_topic_first, _type='data', fname_object=fname_text_feature_topic_first, verbose=False)
+        newsio.save_json(_object=text_feature_topic_second, _type='data', fname_object=fname_text_feature_topic_second, verbose=False)
     else:
         text_feature_topic_first = newsio.load_json(fname_object=fname_text_feature_topic_first, _type='data')
         text_feature_topic_second = newsio.load_json(fname_object=fname_text_feature_topic_second, _type='data')
@@ -211,9 +217,9 @@ if __name__ == '__main__':
         newsio.save(_object=doc_counter, _type='model', fname_object=fname_doc_counter, verbose=False)
         newsio.save(_object=tfidf, _type='model', fname_object=fname_tfidf, verbose=False)
     else:
-        word_counter = newsio.load(fname_object=fname_word_counter, _type='model', verbose=False)
-        doc_counter = newsio.load(fname_object=fname_doc_counter, _type='model', verbose=False)
-        tfidf = newsio.load(fname_object=fname_tfidf, _type='model', verbose=False)
+        word_counter = newsio.load(fname_object=fname_word_counter, _type='model')
+        doc_counter = newsio.load(fname_object=fname_doc_counter, _type='model')
+        tfidf = newsio.load(fname_object=fname_tfidf, _type='model')
 
     print('  | # of individual words (TF-IDF): {:,}'.format(len(word_counter)))
 
@@ -225,3 +231,5 @@ if __name__ == '__main__':
     print(f'  | # of words: {len(word_sorted)}')
     for word, _ in word_sorted[:30]:
         print('  | {}: {:.02f} -> {:.02f} -> {:.02f}'.format(word, tfidf[word]['tf'], tfidf[word]['df'], tfidf[word]['tfidf']))
+
+    newsio.save_json(_object=word_sorted, _type='data', fname_object=fname_target_word_list)
