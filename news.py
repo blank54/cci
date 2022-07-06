@@ -59,11 +59,35 @@ class NewsIO(NewsPath):
             print(f'  | fdir : {fdir_object}')
             print(f'  | fname: {fname_object}')
 
+    def save_json(self, _object, _type, fname_object, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+
+        os.makedirs(fdir_object, exist_ok=True)
+        with open(fpath_object, 'w', encoding='utf-8') as f:
+            json.dump(_object, f)
+
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
+
     def load(self, fname_object, _type, verbose=True):
         fdir_object = os.path.sep.join((self.root, _type))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
         with open(fpath_object, 'rb') as f:
             _object = pk.load(f)
+
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
+
+        return _object
+
+    def load_json(self, fname_object, _type, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+        with open(fpath_object, 'r', encoding='utf-8') as f:
+            _object = json.load(f)
 
         if verbose:
             print(f'  | fdir : {fdir_object}')
