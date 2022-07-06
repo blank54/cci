@@ -25,16 +25,23 @@ def explore_demographic_info(df, except_list):
             pass
         
         try:
-            result['attr'].append(attr)
-            result['max'].append(max(df[attr]))
-            result['min'].append(min(df[attr]))
-            result['mean'].append(df[attr].mean())
-            result['std'].append(df[attr].std())
+            max_value = max(df[attr])
+            min_value = min(df[attr])
+            
+            if all([(max_value==0), (min_value==0)]):
+                print(f'Error: every element is zero: {attr}')
+                continue
+            else:
+                result['attr'].append(attr)
+                result['max'].append(max_value)
+                result['min'].append(min_value)
+                result['mean'].append(df[attr].mean())
+                result['std'].append(df[attr].std())
         except TypeError:
-            print(attr)
+            print(f'Error: wrong data type: {attr}')
             continue
         
-    return pd.DataFrame(result)        
+    return pd.DataFrame(result)
 
 def partition_variable_list(demographic_info_df):
     variable_list_meanstd = []
@@ -86,8 +93,8 @@ if __name__ == '__main__':
     print('Partition variable list')
     variable_list_meanstd, variable_list_minmax = partition_variable_list(demographic_info_df)
 
-    print('  | Mean-std: {}, ...'.format(', '.join(variable_list_meanstd[:5])))
-    print('  | Min-max: {}, ...'.format(', '.join(variable_list_minmax[:5])))
+    print('  | Mean-std ({:,}): {}, ...'.format(len(variable_list_meanstd), ', '.join(variable_list_meanstd[:5])))
+    print('  | Min-max  ({:,}): {}, ...'.format(len(variable_list_minmax), ', '.join(variable_list_minmax[:5])))
 
     print('Normalization')
 
