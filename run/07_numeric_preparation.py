@@ -7,59 +7,14 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from news import NewsPath, NewsIO, NumericData
+from news import NewsPath, NewsIO, NewsFunc, NumericData
 newspath = NewsPath()
 newsio = NewsIO()
+newsfunc = NewsFunc()
 
 import pandas as pd
 from copy import deepcopy
 from collections import defaultdict
-
-
-def explore_demographic_info(df, except_list):
-    result = defaultdict(list)
-    for attr in df.keys():
-        if attr in except_list:
-            continue
-        else:
-            pass
-        
-        try:
-            max_value = max(df[attr])
-            min_value = min(df[attr])
-            
-            if all([(max_value==0), (min_value==0)]):
-                print(f'Error: every element is zero: {attr}')
-                continue
-            else:
-                result['attr'].append(attr)
-                result['max'].append(max_value)
-                result['min'].append(min_value)
-                result['mean'].append(df[attr].mean())
-                result['std'].append(df[attr].std())
-        except TypeError:
-            print(f'Error: wrong data type: {attr}')
-            continue
-        
-    return pd.DataFrame(result)
-
-def partition_variable_list(demographic_info_df):
-    variable_list_meanstd = []
-    variable_list_minmax = []
-
-    for _, row in demographic_info_df.iterrows():
-        if row['min'] < 0:
-            variable_list_meanstd.append(row['attr'])
-        else:
-            variable_list_minmax.append(row['attr'])
-
-    return variable_list_meanstd, variable_list_minmax
-
-def normalize_meanstd(df):
-    return (df_meanstd-df_meanstd.mean())/df_meanstd.std()
-
-def normalize_minmax(df):
-    return (df_minmax-df_minmax.min())/(df_minmax.max()-df_minmax.min())
 
 
 if __name__ == '__main__':
@@ -85,13 +40,13 @@ if __name__ == '__main__':
     print('  | Shape of dataset: {}'.format(numeric_df.shape))
 
     ## Demographic information
-    demographic_info_df = explore_demographic_info(numeric_df, except_list=['yearmonth'])
+    demographic_info_df = newsfunc.explore_demographic_info(numeric_df, except_list=['yearmonth'])
     demographic_info_df.to_excel(excel_writer=fpath_demographic_info)
 
     ## Normalization
     print('============================================================')
     print('Partition variable list')
-    variable_list_meanstd, variable_list_minmax = partition_variable_list(demographic_info_df)
+    variable_list_meanstd, variable_list_minmax = newsfunc.partition_variable_list(demographic_info_df)
 
     print('  | Mean-std ({:,}): {}, ...'.format(len(variable_list_meanstd), ', '.join(variable_list_meanstd[:5])))
     print('  | Min-max  ({:,}): {}, ...'.format(len(variable_list_minmax), ', '.join(variable_list_minmax[:5])))
@@ -99,15 +54,15 @@ if __name__ == '__main__':
     print('Normalization')
 
     df_meanstd = deepcopy(numeric_df[variable_list_meanstd])
-    df_meanstd_norm = normalize_meanstd(df_meanstd)
+    df_meanstd_norm = newsfunc.normalize_meanstd(df_meanstd)
     df_meanstd_norm = deepcopy(pd.concat([df_meanstd_norm, numeric_df['yearmonth']], axis=1))
 
     df_minmax = deepcopy(numeric_df[variable_list_minmax])
-    df_minmax_norm = normalize_minmax(df_minmax)
+    df_minmax_norm = newsfunc.normalize_minmax(df_minmax)
     df_minmax_norm = deepcopy(pd.concat([df_minmax_norm, numeric_df['yearmonth']], axis=1))
 
     numeric_df_norm = deepcopy(pd.merge(df_meanstd_norm, df_minmax_norm))
-    demographic_info_norm = explore_demographic_info(numeric_df_norm, except_list=['yearmonth'])
+    demographic_info_norm = newsfunc.explore_demographic_info(numeric_df_norm, except_list=['yearmonth'])
 
     demographic_info_norm.to_excel(excel_writer=fpath_demographic_info_norm)
     numeric_df_norm.to_excel(excel_writer=fpath_numeric_data_norm)
