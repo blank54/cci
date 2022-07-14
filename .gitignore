@@ -16,6 +16,10 @@ test*
 *.ipynb
 .ipynb_checkpoints/
 
+# Installation
+*.run
+*.deb
+
 # Data
 *.xlsx
 *.pdf
