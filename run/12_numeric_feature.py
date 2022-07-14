@@ -17,7 +17,7 @@ from collections import defaultdict
 
 
 def build_numeric_feature(numeric_data):
-    variable_list = [var for var in numeric_data.keys() if var not in ['Unnamed: 0', 'yearmonth']]
+    variable_list = [var for var in numeric_data.keys() if var not in ['Unnamed: 0', 'yearmonth', 'cci']]
 
     print('## Feature: raw')
     numeric_feature_first = defaultdict(dict)
@@ -45,8 +45,6 @@ def build_numeric_feature(numeric_data):
             numeric_feature_second[row_now['yearmonth']]['ratio'][var] = ratio_value
 
     return numeric_feature_first, numeric_feature_second
-
-
 
 
 if __name__ == '__main__':

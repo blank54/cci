@@ -47,8 +47,8 @@ class NewsIO(NewsPath):
         print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
         print('--------------------------------------------------')
 
-    def save(self, _object, _type, fname_object, verbose=True):
-        fdir_object = os.path.sep.join((self.root, _type))
+    def save(self, _object, _type, fname_object, verbose=True, **kwargs):
+        fdir_object = kwargs.get('fdir_object', os.path.sep.join((self.root, _type)))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
 
         os.makedirs(fdir_object, exist_ok=True)
@@ -71,8 +71,8 @@ class NewsIO(NewsPath):
             print(f'  | fdir : {fdir_object}')
             print(f'  | fname: {fname_object}')
 
-    def load(self, fname_object, _type, verbose=True):
-        fdir_object = os.path.sep.join((self.root, _type))
+    def load(self, fname_object, _type, verbose=True, **kwargs):
+        fdir_object = kwargs.get('fdir_object', os.path.sep.join((self.root, _type)))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
         with open(fpath_object, 'rb') as f:
             _object = pk.load(f)
@@ -94,6 +94,31 @@ class NewsIO(NewsPath):
             print(f'  | fname: {fname_object}')
 
         return _object
+
+    def load_cci(self, start, end):
+        fpath = os.path.sep.join((self.fdir_data, 'cci.xlsx'))
+        df = pd.read_excel(fpath, na_values='')
+
+        data = defaultdict(list)
+        for _, row in df.iterrows():
+            year = datetime.strftime(row['yearmonth'], '%Y')
+            month = datetime.strftime(row['yearmonth'], '%m')
+            yearmonth = '{}{}'.format(year, month)
+            if yearmonth < start:
+                continue
+            elif yearmonth > end:
+                continue
+            else:
+                pass
+
+            if row['cci']:
+                data['yearmonth'].append(yearmonth)
+                data['cci'].append(row['cci'])
+            else:
+                print(f'Error: no value of CCI at {yearmonth}')
+                continue
+
+        return pd.DataFrame(data)
 
     def read_thesaurus(self, fname_thesaurus):
         fpath_thesaurus = os.path.sep.join((self.fdir_thesaurus, fname_thesaurus))
