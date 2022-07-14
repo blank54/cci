@@ -40,7 +40,8 @@ if __name__ == '__main__':
     print('  | Shape of dataset: {}'.format(numeric_df.shape))
 
     ## Demographic information
-    demographic_info_df = newsfunc.explore_demographic_info(numeric_df, except_list=['yearmonth'])
+    except_list = ['yearmonth']
+    demographic_info_df = newsfunc.explore_demographic_info(numeric_df, except_list=except_list)
     demographic_info_df.to_excel(excel_writer=fpath_demographic_info)
 
     ## Normalization
@@ -55,11 +56,11 @@ if __name__ == '__main__':
 
     df_meanstd = deepcopy(numeric_df[variable_list_meanstd])
     df_meanstd_norm = newsfunc.normalize_meanstd(df_meanstd)
-    df_meanstd_norm = deepcopy(pd.concat([df_meanstd_norm, numeric_df['yearmonth']], axis=1))
+    df_meanstd_norm = deepcopy(pd.concat([df_meanstd_norm, numeric_df[except_list]], axis=1))
 
     df_minmax = deepcopy(numeric_df[variable_list_minmax])
     df_minmax_norm = newsfunc.normalize_minmax(df_minmax)
-    df_minmax_norm = deepcopy(pd.concat([df_minmax_norm, numeric_df['yearmonth']], axis=1))
+    df_minmax_norm = deepcopy(pd.concat([df_minmax_norm, numeric_df[except_list]], axis=1))
 
     numeric_df_norm = deepcopy(pd.merge(df_meanstd_norm, df_minmax_norm))
     demographic_info_norm = newsfunc.explore_demographic_info(numeric_df_norm, except_list=['yearmonth'])
