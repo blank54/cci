@@ -1,9 +1,3 @@
-'''
-DNN regression: https://ysyblog.tistory.com/101
-Early stopping: https://3months.tistory.com/424
-NaN loss: https://whiteglass.tistory.com/1
-'''
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -21,16 +15,15 @@ newsio = NewsIO()
 newspath = NewsPath()
 
 import itertools
-import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
 
 import tensorflow as tf
 import tensorflow.keras as keras
-from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.layers import SimpleRNN, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
+from keras.preprocessing.sequence import TimeseriesGenerator
 
 
 def data_split(df_x, df_y, variable_list):
@@ -46,32 +39,17 @@ def build_dataset(x_train, x_test, y_train, y_test, BATCH_SIZE):
 
     return train_dataset, test_dataset
 
-def model_identification(INPUT_SHAPE, DROPOUT, LEARNING_RATE):
+def model_identification(RNN_UNIT, DROPOUT, DENSE_UNIT, LEARNING_RATE, INPUT_SHAPE):
     model = keras.Sequential()
-    model.add(Dense(units=16, activation='relu', input_shape=INPUT_SHAPE))
+    model.add(SimpleRNN(RNN_UNIT, activation='relu', input_shape=INPUT_SHAPE, return_sequences=True))
     model.add(Dropout(DROPOUT))
-    model.add(Dense(units=8, activation='relu'))
+    model.add(Dense(DENSE_UNIT))
     model.add(Dropout(DROPOUT))
-    model.add(Dense(units=4, activation='relu'))
-    model.add(Dropout(DROPOUT))
-    model.add(Dense(units=2, activation='relu'))
-    model.add(Dropout(DROPOUT))
-    model.add(Dense(units=1))
+    model.add(Dense(1))
 
     model.compile(optimizer=Adam(learning_rate=LEARNING_RATE), loss='mse')
 
     return model
-
-def train(model, train_dataset, test_dataset, NUM_EPOCHS, STEPS_PER_EPOCH, VALIDATION_STEPS):
-    history = model.fit(train_dataset,
-                        epochs=NUM_EPOCHS,
-                        steps_per_epoch=STEPS_PER_EPOCH,
-                        validation_data=test_dataset,
-                        validation_steps=VALIDATION_STEPS,
-                        )
-
-    return model, history
-    
 
 if __name__ == '__main__':
     ## Parameters
@@ -80,7 +58,10 @@ if __name__ == '__main__':
     RANDOM_STATE = 42
     tf.random.set_seed(RANDOM_STATE)
 
+    TIMESTEPS_LIST = [1, 2, 3, 4, 5, 10, 15]
     BATCH_SIZE_LIST = [4, 8, 16, 32, 64]
+    RNN_UNIT_LIST = [4, 8, 16, 32, 64]
+    DENSE_UNIT_LIST = [8, 16, 32, 64]
     DROPOUT_LIST = [0.1, 0.2, 0.3, 0.4]
 
     NUM_EPOCHS = 20000
@@ -90,7 +71,6 @@ if __name__ == '__main__':
     fname_data_norm = f'data_w-{TOPN}_norm.pk'
     fname_correlated_variables = 'correlated_variables.json'
 
-    ## Data import
     print('============================================================')
     print('Data import')
 
@@ -105,16 +85,14 @@ if __name__ == '__main__':
     x_train, x_test, y_train, y_test = data_split(df_norm, cci, variable_list)
 
     ## Model training
-    print('============================================================')
-    print('Model training')
-
     results = []
-    for BATCH_SIZE, DROPOUT, LEARNING_RATE in itertools.product(BATCH_SIZE_LIST, DROPOUT_LIST, LEARNING_RATE_LIST):
-        fdir_model = os.path.sep.join((newspath.fdir_model, f'TOPN-{TOPN}/dnn_regression/B-{BATCH_SIZE}_O-{DROPOUT}/'))
+
+    for TIMESTEPS, BATCH_SIZE, RNN_UNIT, DENSE_UNIT, DROPOUT, LEARNING_RATE in itertools.product(TIMESTEPS_LIST, BATCH_SIZE_LIST, RNN_UNIT_LIST, DENSE_UNIT_LIST, DROPOUT_LIST, LEARNING_RATE_LIST):
+        fdir_model = os.path.sep.join((newspath.fdir_model, f'TOPN-{TOPN}/rnn_regression/T-{TIMESTEPS}_B-{BATCH_SIZE}_R-{RNN_UNIT}_D-{DENSE_UNIT}_O-{DROPOUT}/'))
         fname_model = f'model_L-{LEARNING_RATE}_E-{NUM_EPOCHS}.pk'
         fname_history = f'history_L-{LEARNING_RATE}_E-{NUM_EPOCHS}.pk'
         fpath_model = os.path.sep.join((fdir_model, fname_model))
-        fpath_history = os.path.sep.join((fdir_model, fname_history))        
+        fpath_history = os.path.sep.join((fdir_model, fname_history))
 
         ## Model development
         if os.path.isfile(fpath_model):
@@ -123,13 +101,10 @@ if __name__ == '__main__':
         else:
             os.makedirs(fdir_model, exist_ok=True)
 
-            train_dataset, test_dataset = build_dataset(x_train, x_test, y_train, y_test, BATCH_SIZE)
-            INPUT_SHAPE = (x_train.shape[1],)
-            STEPS_PER_EPOCH = x_train.shape[0]//BATCH_SIZE
-            VALIDATION_STEPS = int(np.ceil(x_test.shape[0]/BATCH_SIZE))
-
-            model = model_identification(INPUT_SHAPE, LEARNING_RATE)
-            history = model.fit(train_dataset, epochs=NUM_EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=test_dataset, validation_steps=VALIDATION_STEPS)
+            train_generator = TimeseriesGenerator(x_train, y_train, length=TIMESTEPS, batch_size=BATCH_SIZE)
+            INPUT_SHAPE = (train_generator[0][0].shape[1], train_generator[0][0].shape[2])
+            model = model_identification(RNN_UNIT, DROPOUT, DENSE_UNIT, LEARNING_RATE, INPUT_SHAPE)
+            history = model.fit_generator(train_generator, epochs=NUM_EPOCHS)
 
             newsio.save(_object=model, fname_object=fname_model, _type='model', fdir_object=fdir_model)
             newsio.save(_object=history, fname_object=fname_history, _type='model', fdir_object=fdir_model)
@@ -149,9 +124,12 @@ if __name__ == '__main__':
 
         print('--------------------------------------------------')
         print('Model information')
-        print(f'BATCH_SIZE   : {BATCH_SIZE}')
-        print(f'DROPOUT      : {DROPOUT}')
-        print(f'LEARNING_RATE: {LEARNING_RATE:.,}')
+        print(f'  | TIMESTEPS    : {TIMESTEPS}')
+        print(f'  | BATCH_SIZE   : {BATCH_SIZE}')
+        print(f'  | RNN_UNIT     : {RNN_UNIT}')
+        print(f'  | DENSE_UNIT   : {DENSE_UNIT}')
+        print(f'  | DROPOUT      : {DROPOUT}')
+        print(f'  | LEARNING_RATE: {LEARNING_RATE:.,}')
         print('--------------------------------------------------')
         print('Model performance')
         print(f'  | MSE : {MSE:.03f}')

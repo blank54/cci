@@ -47,7 +47,8 @@ class NewsIO(NewsPath):
         print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
         print('--------------------------------------------------')
 
-    def save(self, _object, _type, fname_object, verbose=True, **kwargs):
+    def save(self, _object, fname_object, verbose=True, **kwargs):
+        _type = kwargs.get('_type', '')
         fdir_object = kwargs.get('fdir_object', os.path.sep.join((self.root, _type)))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
 
@@ -71,7 +72,8 @@ class NewsIO(NewsPath):
             print(f'  | fdir : {fdir_object}')
             print(f'  | fname: {fname_object}')
 
-    def load(self, fname_object, _type, verbose=True, **kwargs):
+    def load(self, fname_object, verbose=True, **kwargs):
+        _type = kwargs.get('_type', '')
         fdir_object = kwargs.get('fdir_object', os.path.sep.join((self.root, _type)))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
         with open(fpath_object, 'rb') as f:
