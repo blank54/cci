@@ -7,8 +7,7 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsCorpus, NumericMeta, NumericData
-from newsutil import NewsPath, NewsIO, NewsFunc
+from news import NewsCorpus, NumericMeta, NumericData, NewsPath, NewsIO, NewsFunc
 newspath = NewsPath()
 newsio = NewsIO()
 newsfunc = NewsFunc()
@@ -65,27 +64,31 @@ if __name__ == '__main__':
     # print('============================================================')
     # print('Corpus')
 
-    # corpus = NewsCorpus(fdir_corpus=newspath.fdir_articles)
-    # DOCN = len(corpus)
-
-    # print('  | # of docs: {:,}'.format(DOCN))
+    # corpus = NewsCorpus(dname_corpus='corpus', start='200501', end='201912')
+    # corpus_filtered = NewsCorpus(dname_corpus='corpus_topic_filtered', start='200501', end='201912')
+    
+    # print('  | Original corpus: {:,}'.format(len(corpus)))
+    # print('  | Filtered corpus: {:,}'.format(len(corpus_filtered)))
 
     ## Numeric Data
     print('============================================================')
     print('Numeric data')
 
-    print('--------------------------------------------------')    
     numeric_meta = NumericMeta(fname='metadata_numeric.txt', fdir=newspath.fdir_thesaurus)
-    for kor, eng, abb in numeric_meta.info:
-        print('  | {}: {} ({})'.format(kor, eng, abb))
 
-    print('--------------------------------------------------')
     fdir_numeric_data = os.path.sep.join((newspath.fdir_data, 'numeric'))
     numeric_data = NumericData(fdir=fdir_numeric_data)
     numeric_df = numeric_data.to_df(start='200501', end='201912')
-    print('  | Num of variables         : {:,}'.format(numeric_data.num_vars))
-    print('  | Num of attributes (total): {:,}'.format(numeric_data.num_attrs))
-    print('  | Shape of dataset         : {}'.format(numeric_df.shape))
+
+    print('--------------------------------------------------')    
+    for kor, eng, abb in numeric_meta.info:
+        num_vars = len([var for var in numeric_data.vars if abb.lower() == var.split('_')[0]])
+        print('  | {}: {} ({}) -> ({:,})'.format(kor, eng, abb, num_vars))
+
+    print('--------------------------------------------------')
+    print('  | Num of indicators       : {:,}'.format(numeric_data.num_indicators))
+    print('  | Num of variables (total): {:,}'.format(numeric_data.num_vars))
+    print('  | Shape of dataset        : {}'.format(numeric_df.shape))
 
     print('--------------------------------------------------')
     print(numeric_df.head())

@@ -12,7 +12,7 @@ import sys
 rootpath = os.path.sep.join(os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)[:-1])
 sys.path.append(rootpath)
 
-from object import NewsCorpus
+from news import NewsCorpus
 from newsutil import NewsIO, NewsPath
 newsio = NewsIO()
 newspath = NewsPath()
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     print('--------------------------------------------------')
     print('Load corpus')
 
-    corpus = NewsCorpus(fdir_corpus=newspath.fdir_corpus)
+    corpus = NewsCorpus()
     docs_dict, id2word, docs_bow = data_preparation(corpus=corpus, SAMPLE_SIZE=SAMPLE_SIZE)
     print(f'  | Corpus     : {len(corpus):,}')
     print(f'  | Sample size: {SAMPLE_SIZE:,}')

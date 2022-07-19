@@ -7,14 +7,15 @@ import sys
 import random
 import json
 import psutil
-from glob import glob
+import itertools
 import numpy as np
 import pickle as pk
 import pandas as pd
 from tqdm import tqdm
+from glob import glob
 from pathlib import Path
-from collections import defaultdict
 from datetime import datetime
+from collections import defaultdict
 
 import gensim.corpora as corpora
 from gensim.models.ldamodel import LdaModel
@@ -46,8 +47,9 @@ class NewsIO(NewsPath):
         print('  | Current memory usage: {:,.03f} GB ({:,.03f} MB)'.format(active_memory/(2**30), active_memory/(2**20)))
         print('--------------------------------------------------')
 
-    def save(self, _object, _type, fname_object, verbose=True):
-        fdir_object = os.path.sep.join((self.root, _type))
+    def save(self, _object, fname_object, verbose=True, **kwargs):
+        _type = kwargs.get('_type', '')
+        fdir_object = kwargs.get('fdir_object', os.path.sep.join((self.root, _type)))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
 
         os.makedirs(fdir_object, exist_ok=True)
@@ -58,8 +60,21 @@ class NewsIO(NewsPath):
             print(f'  | fdir : {fdir_object}')
             print(f'  | fname: {fname_object}')
 
-    def load(self, fname_object, _type, verbose=True):
+    def save_json(self, _object, _type, fname_object, verbose=True):
         fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+
+        os.makedirs(fdir_object, exist_ok=True)
+        with open(fpath_object, 'w', encoding='utf-8') as f:
+            json.dump(_object, f)
+
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
+
+    def load(self, fname_object, verbose=True, **kwargs):
+        _type = kwargs.get('_type', '')
+        fdir_object = kwargs.get('fdir_object', os.path.sep.join((self.root, _type)))
         fpath_object = os.path.sep.join((fdir_object, fname_object))
         with open(fpath_object, 'rb') as f:
             _object = pk.load(f)
@@ -69,6 +84,43 @@ class NewsIO(NewsPath):
             print(f'  | fname: {fname_object}')
 
         return _object
+
+    def load_json(self, fname_object, _type, verbose=True):
+        fdir_object = os.path.sep.join((self.root, _type))
+        fpath_object = os.path.sep.join((fdir_object, fname_object))
+        with open(fpath_object, 'r', encoding='utf-8') as f:
+            _object = json.load(f)
+
+        if verbose:
+            print(f'  | fdir : {fdir_object}')
+            print(f'  | fname: {fname_object}')
+
+        return _object
+
+    def load_cci(self, start, end):
+        fpath = os.path.sep.join((self.fdir_data, 'cci.xlsx'))
+        df = pd.read_excel(fpath, na_values='')
+
+        data = defaultdict(list)
+        for _, row in df.iterrows():
+            year = datetime.strftime(row['yearmonth'], '%Y')
+            month = datetime.strftime(row['yearmonth'], '%m')
+            yearmonth = '{}{}'.format(year, month)
+            if yearmonth < start:
+                continue
+            elif yearmonth > end:
+                continue
+            else:
+                pass
+
+            if row['cci']:
+                data['yearmonth'].append(yearmonth)
+                data['cci'].append(row['cci'])
+            else:
+                print(f'Error: no value of CCI at {yearmonth}')
+                continue
+
+        return pd.DataFrame(data)
 
     def read_thesaurus(self, fname_thesaurus):
         fpath_thesaurus = os.path.sep.join((self.fdir_thesaurus, fname_thesaurus))
@@ -92,6 +144,53 @@ class NewsFunc(NewsPath):
         query = query_part.split('-')[-1]
         date = date_part.split('-')[-1]
         return query, date
+
+    def explore_demographic_info(self, df, **kwargs):
+        except_list = kwargs.get('except_list', [])
+
+        result = defaultdict(list)
+        for attr in df.keys():
+            if attr in except_list:
+                continue
+            else:
+                pass
+            
+            try:
+                max_value = max(df[attr])
+                min_value = min(df[attr])
+                
+                if all([(max_value==0), (min_value==0)]):
+                    print(f'Error: every element is zero: {attr}')
+                    continue
+                else:
+                    result['attr'].append(attr)
+                    result['max'].append(max_value)
+                    result['min'].append(min_value)
+                    result['mean'].append(df[attr].mean())
+                    result['std'].append(df[attr].std())
+            except TypeError:
+                print(f'Error: wrong data type: {attr}')
+                continue
+            
+        return pd.DataFrame(result)
+
+    def partition_variable_list(self, demographic_info_df):
+        variable_list_meanstd = []
+        variable_list_minmax = []
+
+        for _, row in demographic_info_df.iterrows():
+            if row['min'] < 0:
+                variable_list_meanstd.append(row['attr'])
+            else:
+                variable_list_minmax.append(row['attr'])
+
+        return variable_list_meanstd, variable_list_minmax
+
+    def normalize_meanstd(self, df):
+        return (df-df.mean())/df.std()
+
+    def normalize_minmax(self, df):
+        return (df-df.min())/(df.max()-df.min())
 
 
 # class NewsArticle:
@@ -190,49 +289,106 @@ class NewsDate:
         return datetime.strptime(self.date, '%Y%m%d').strftime('%Y%m')
 
 
-class NewsCorpus(NewsPath):
+class NewsCorpus():
     def __init__(self, **kwargs):
+        self.dname_corpus = kwargs.get('dname_corpus', 'corpus')
+        self.fdir_corpus = os.path.sep.join((NewsPath().root, self.dname_corpus))
+
         # self.yearmonth_list = sorted([dirs for _, dirs, _ in os.walk(os.path.sep.join((self.fdir_corpus, 'yearmonth'))) if dirs])
-        self.start = kwargs.get('start', sorted(self.fdir_corpus)[0])
-        self.end = kwargs.get('end', sorted(self.fdir_corpus)[-1])
+        self.start = kwargs.get('start', sorted(os.listdir(self.fdir_corpus))[0])
+        self.end = kwargs.get('end', sorted(os.listdir(self.fdir_corpus))[-1])
 
         self.yearmonth_list = self.__get_yearmonth_list()
+        self.fdir_list = [os.path.sep.join((self.fdir_corpus, yearmonth)) for yearmonth in self.yearmonth_list]
+
+        self.topic_filtered = kwargs.get('topic_filtered', False)
+        self.topic_ids = kwargs.get('topic_ids', []) # Topic ids to be filtered
 
     def __len__(self):
-        return len(glob(self.fdir_corpus+'/*/*.json'))
+        corpus_len = 0
+        if self.topic_filtered:
+            for doc in self.iter():
+                if doc['topic_id'] in self.topic_ids:
+                    continue
+                else:
+                    corpus_len += 1
+        else:
+            for yearmonth in self.yearmonth_list:
+                corpus_len += len(glob(self.fdir_corpus+'/'+yearmonth+'/*.json'))
+        return corpus_len
+
+    def sent_cnt(self):
+        send_cnt = 0
+        if self.topic_filtered:
+            for doc in self.iter():
+                if doc['topic_id'] in self.topic_ids:
+                    continue
+                else:
+                    sent_cnt += len(doc['normalized_sents'])
+        else:
+            for doc in self.iter():
+                send_cnt += len(doc['normalized_sents'])
+        return sent_cnt
 
     def __get_yearmonth_list(self):
         yearmonth_start = datetime.strptime(self.start, '%Y%m').strftime('%Y-%m-%d')
         yearmonth_end = datetime.strptime(self.end, '%Y%m').strftime('%Y-%m-%d')
         return pd.date_range(yearmonth_start, yearmonth_end, freq='MS').strftime('%Y%m').tolist()
 
-    def iter(self):
-        for fpath in tqdm(glob(self.fdir_corpus+'/*/*.json')):
-            try:
-                with open(fpath, 'r', encoding='utf-8') as f:
-                    yield json.load(f)
-            except:
-                print(f'ArticleReadingError: {fpath}')
+    def iter(self, sampling=False):
+        fpath_list = list(itertools.chain(*[[os.path.sep.join((fdir, fname)) for fname in os.listdir(fdir)] for fdir in self.fdir_list]))
 
-    def iter_sampling(self, n, random_state=42):
-        fpath_list = random.sample(glob(self.fdir_corpus+'/*/*.json'), k=n)
-        for fpath in tqdm(flist):
-            try:
-                with open(fpath, 'r', encoding='utf-8') as f:
-                    yield json.load(f)
-            except:
-                print(f'ArticleReadingError: {fpath}')            
+        if sampling:
+            fpath_list = random.sample(fpath_list, k=n)
+        else:
+            pass
 
-    def iter_month(self):
-        for yearmonth in tqdm(self.yearmonth_list):
-            article_list = []
-            for fpath in glob(os.path.sep.join((self.fdir_corpus+yearmonth+'*.json'))):
+        if self.topic_filtered:
+            for fpath in tqdm(fpath_list):
                 try:
                     with open(fpath, 'r', encoding='utf-8') as f:
-                        article_list.append(json.load(f))
+                        doc = json.load(f)
+                        if doc['topic_id'] in self.topic_ids:
+                            continue
+                        else:
+                            yield doc
                 except:
                     print(f'ArticleReadingError: {fpath}')
-            yield article_list
+                    yield None
+        else:
+            for fpath in tqdm(fpath_list):
+                # try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    yield json.load(f)
+                # except:
+                #     print(f'ArticleReadingError: {fpath}')
+                #     yield None
+
+    def iter_month(self):
+        if self.topic_filtered:
+            for yearmonth in tqdm(self.yearmonth_list):
+                doc_list = []
+                for fpath in glob(self.fdir_corpus+'/'+yearmonth+'/*.json'):
+                    try:
+                        with open(fpath, 'r', encoding='utf-8') as f:
+                            doc = json.load(f)
+                            if doc['topic_id'] in self.topic_ids:
+                                continue
+                            else:
+                                doc_list.append(doc)
+                    except:
+                        print(f'ArticleReadingError: {fpath}')
+                yield yearmonth, doc_list
+        else:
+            for yearmonth in tqdm(self.yearmonth_list):
+                doc_list = []
+                for fpath in glob(self.fdir_corpus+'/'+yearmonth+'/*.json'):
+                    try:
+                        with open(fpath, 'r', encoding='utf-8') as f:
+                            doc_list.append(json.load(f))
+                    except:
+                        print(f'ArticleReadingError: {fpath}')
+                yield yearmonth, doc_list
 
 
 class Word:
@@ -332,36 +488,35 @@ class NumericData():
     def __init__(self, fdir, **kwargs):
         self.fdir = fdir
 
-        self.data_list = self.__read_data()
-        self.attrs = list(set([attr for _, attr, _ in self.data_list]))
+        self.data_list, self.var_list = self.__read_data()
+        self.vars = list(set([var for _, var, _ in self.data_list]))
 
-        self.num_vars = len(os.listdir(self.fdir))
-        self.num_attrs = len(self.attrs)
+        self.num_indicators = len(os.listdir(self.fdir))
+        self.num_vars = len(self.vars)
 
         self.start = kwargs.get('start', 'InputRequired')
         self.end = kwargs.get('end', 'InputRequired')
 
     def __read_data(self):
         data_list = []
+        var_list = []
         for fname in os.listdir(self.fdir):
             fpath = os.path.sep.join((self.fdir, fname))
 
             _df = pd.read_excel(fpath, na_values='')
             for _, row in _df.iterrows():
-                year = row['yearmonth'].year
-                month = row['yearmonth'].month
-                yearmonth = f'{year}{month:02}'
+                year = datetime.strftime(row['yearmonth'], '%Y')
+                month = datetime.strftime(row['yearmonth'], '%m')
+                yearmonth = '{}{}'.format(year, month)
 
-                if yearmonth == 'nannan':
-                    print(row)
-
-                for attr in row.keys():
-                    if attr == 'yearmonth':
+                for var in row.keys():
+                    if var == 'yearmonth':
                         continue
                     else:
-                        data_list.append((yearmonth, attr, row[attr]))
+                        data_list.append((yearmonth, var, row[var]))
+                        var_list.append(var)
 
-        return data_list
+        return data_list, list(set(var_list))
 
     def __set_time_range(self, start, end):
         '''
@@ -384,9 +539,13 @@ class NumericData():
 
         _dict = defaultdict(list)
         _dict['yearmonth'] = time_range
-        for yearmonth, attr, value in sorted(self.data_list, key=lambda x:x[0], reverse=False):
+        for yearmonth, var, value in sorted(self.data_list, key=lambda x:x[0], reverse=False):
             if yearmonth in time_range:
-                _dict[attr].append(value)
+                try:
+                    value2num = float(value)
+                except ValueError:
+                    value2num = 0
+                _dict[var].append(value2num)
             else:
                 continue
 

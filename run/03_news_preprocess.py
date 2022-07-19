@@ -61,6 +61,10 @@ def remove_stopwords(sent, stoplist):
 
 def preprocess(corpus):
     for article in corpus.iter():
+        article['normalized_sents'] = []
+        article['nouns'] = []
+        article['nouns_stop'] = []
+
         ## Preprocess
         normalized_text = normalize_text(text=article['content'])
         sents = parse_sent(text=normalized_text)
@@ -71,9 +75,9 @@ def preprocess(corpus):
             if trash_score < MAX_TRASH_SCORE:
                 morphs = komoran.nouns(sent)
 
-                article['normalized_sents'] = sent
-                article['nouns'] = morphs
-                article['nouns_stop'] = remove_stopwords(sent=morphs, stoplist=stoplist)
+                article['normalized_sents'].append(sent)
+                article['nouns'].append(morphs)
+                article['nouns_stop'].append(remove_stopwords(sent=morphs, stoplist=stoplist))
             else:
                 continue
 
