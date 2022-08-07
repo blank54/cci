@@ -25,7 +25,7 @@ import pyLDAvis.gensim
 import matplotlib.pyplot as plt
 
 
-class NewsPath:
+class MyPath:
     root = os.path.dirname(os.path.abspath(__file__))
 
     fdir_data = os.path.sep.join((root, 'data'))
@@ -40,7 +40,7 @@ class NewsPath:
     fdir_articles = os.path.sep.join((root, 'articles'))
 
 
-class NewsIO(NewsPath):
+class MyIO(MyPath):
     def memory_usage(self):
         print('------------------------------------------------------------')
         active_memory = psutil.virtual_memory()._asdict()['used']
@@ -130,7 +130,7 @@ class NewsIO(NewsPath):
         return word_list
 
 
-class NewsFunc(NewsPath):
+class MyFunc(MyPath):
     def text2sents(self, text):
         '''
         text : a str object of doc.content
@@ -292,7 +292,7 @@ class NewsDate:
 class NewsCorpus():
     def __init__(self, **kwargs):
         self.dname_corpus = kwargs.get('dname_corpus', 'corpus')
-        self.fdir_corpus = os.path.sep.join((NewsPath().root, self.dname_corpus))
+        self.fdir_corpus = os.path.sep.join((MyPath().root, self.dname_corpus))
 
         # self.yearmonth_list = sorted([dirs for _, dirs, _ in os.walk(os.path.sep.join((self.fdir_corpus, 'yearmonth'))) if dirs])
         self.start = kwargs.get('start', sorted(os.listdir(self.fdir_corpus))[0])
