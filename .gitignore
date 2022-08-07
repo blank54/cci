@@ -13,7 +13,7 @@ tmp*
 test*
 
 # Jupyter notebook
-*.ipynb
+# *.ipynb
 .ipynb_checkpoints/
 
 # Installation
